@@ -30,5 +30,10 @@ agent_status.json
 agent_status.tmp
 email_preview.html
 
+# Auth + per-user data (passwords, sessions, favorites) — never commit
+users.json
+favorites.json
+.flask_secret
+
 # NOTE: settings.json IS committed (it's config), but secrets were moved to .env.
 # tips.json IS committed (generic apartment tips — nice for the demo).

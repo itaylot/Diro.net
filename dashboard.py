@@ -5,13 +5,16 @@ Open: http://localhost:5050
 """
 
 import app_env  # noqa: F401 — forces UTF-8 stdout + loads .env (must be first)
+import app_auth
 import json, re, socket, threading, time as _time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, session, redirect
 import requests as req_lib
 
 app = Flask(__name__)
+app.secret_key = app_auth.get_secret_key()
+app.permanent_session_lifetime = timedelta(days=30)  # stay logged in for a month
 LISTINGS_FILE  = Path(__file__).parent / "all_listings.json"
 DISMISSED_FILE = Path(__file__).parent / "dismissed.json"
 SETTINGS_FILE  = Path(__file__).parent / "settings.json"
@@ -376,7 +379,22 @@ body{
 .stat-lbl{font-size:11.5px;font-weight:600;color:#9a8f84;margin-top:6px}
 .stat-ico{position:absolute;top:14px;left:14px;font-size:18px;opacity:.5}
 .stat.s-hot .stat-num{color:#dc2626}.stat.s-new .stat-num{color:#16a34a}.stat.s-rev .stat-num{color:#d97706}
+.stat.s-fav .stat-num{color:#e11d48}
 @media(max-width:640px){.stats-strip{grid-template-columns:repeat(2,1fr)}}
+
+/* USER + LOGOUT (header) */
+.user-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:5px 8px 5px 13px;font-size:12.5px;font-weight:600;color:#fff}
+.user-av{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#4ade80,#16a34a);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#06281a;text-transform:uppercase}
+.logout-btn{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:11.5px;font-weight:600;padding:6px 8px;border-radius:7px;font-family:inherit;transition:all .15s}
+.logout-btn:hover{color:#fff;background:rgba(255,255,255,.1)}
+
+/* HEART (favorite) button */
+.btn-fav{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e8e5e0;border-radius:11px;cursor:pointer;font-size:17px;line-height:1;transition:all .15s;padding:0}
+.btn-fav:hover{border-color:#fbcfe8;background:#fdf2f8}
+.btn-fav.on{background:#fff1f2;border-color:#fecdd3}
+.btn-fav .h-empty{display:inline}.btn-fav .h-full{display:none}
+.btn-fav.on .h-empty{display:none}.btn-fav.on .h-full{display:inline;animation:hpop .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes hpop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
 
 @media(max-width:640px){
   .hdr{padding:0 18px;height:58px}
@@ -398,9 +416,11 @@ body{
     </div>
     <div class="hdr-nav">
       <button class="nav-tab on" id="nb-listings" onclick="showView('listings')">דירות</button>
+      <button class="nav-tab"    id="nb-favorites" onclick="showView('favorites')">❤️ המועדפים שלי</button>
       <button class="nav-tab"    id="nb-tips"     onclick="showView('tips')">💡 טיפים</button>
     </div>
     <div class="hdr-right">
+      <div class="user-pill"><span class="user-av" id="user-av">?</span><span id="user-name">…</span><button class="logout-btn" onclick="location.href='/logout'">יציאה</button></div>
       <div class="live-pill"><span class="dot" id="ag-dot"></span><span id="ag-lbl">טוען</span></div>
       <div class="arch-pill" onclick="openArchive()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
@@ -445,6 +465,10 @@ body{
     <div class="sk-card"><div class="sk-img"></div><div class="sk-body"><div class="sk-ln" style="height:17px;width:47%"></div><div class="sk-ln" style="height:12px;width:43%"></div><div class="sk-ln" style="height:11px;width:74%;margin-top:4px"></div></div></div>
   </div>
 </div>
+<div class="page" id="view-favorites" style="display:none">
+  <div class="tips-header"><h2>❤️ המועדפים של <span id="fav-who">…</span></h2><p>הדירות שסימנת בלב — אזור אישי שרק שלך</p></div>
+  <div class="grid" id="fav-grid"></div>
+</div>
 <div class="page" id="view-tips" style="display:none">
   <div class="tips-header"><h2>💡 טיפים לחיפוש דירה</h2><p>עצות ומידע שיעזרו לך למצוא ולשכור דירה טובה</p></div>
   <div class="tips-grid" id="tips-grid">
@@ -471,8 +495,9 @@ body{
 </div>
 <div class="toast" id="toast"></div>
 <script>
-let all=[],dim=new Set(),curView='listings';
+let all=[],dim=new Set(),curView='listings',fav=new Set(),me='';
 const SK=s=>s.split('—')[0].trim();
+const heartSVG='<svg class="h-empty" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#d1597f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><svg class="h-full" width="17" height="17" viewBox="0 0 24 24" fill="#e11d48" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 const BANS={Yad2:'linear-gradient(155deg,#1a365d,#1e40af)',Homely:'linear-gradient(155deg,#052e16,#15803d)',Facebook:'linear-gradient(155deg,#1e3a8a,#1d4ed8)'};
 const ban=s=>BANS[SK(s)]||'linear-gradient(155deg,#111,#333)';
 const sc=s=>SK(s)==='Yad2'?'src-yad2':SK(s).includes('Facebook')?'src-fb':'src-hom';
@@ -483,15 +508,18 @@ function mLevel(sc){sc=sc||0;const pct=Math.max(40,Math.min(99,Math.round(sc/18*
 const RHE={rental_keyword:'מודעת השכרה',availability_keyword:'כניסה/זמינה',dedicated_group:'שכונה ב׳',date_found:'תאריך כניסה',suitable_for_couple:'מתאים לזוג',studio_or_unit:'יחידת דיור'};
 function whyHe(rs){if(!rs)return[];const out=[];rs.forEach(r=>{if(r.indexOf('location:')===0)out.push('מיקום: '+r.split(':')[1]);else if(RHE[r])out.push(RHE[r])});return[...new Set(out)].slice(0,4)}
 function fresh(ts){if(!ts)return null;const d=new Date(ts.replace(' ','T'));if(isNaN(d))return null;const m=(Date.now()-d)/60000;let txt;if(m<60)txt='לפני '+Math.max(0,Math.round(m))+' דק׳';else if(m<1440)txt='לפני '+Math.floor(m/60)+' שעות';else txt='לפני '+Math.floor(m/1440)+' ימים';return{txt,isNew:m<720}}
-function showView(v){curView=v;document.getElementById('view-listings').style.display=v==='listings'?'':'none';document.getElementById('view-tips').style.display=v==='tips'?'':'none';document.getElementById('meta-bar').style.display=v==='listings'?'':'none';document.getElementById('scan-bar').className='scan-bar';['listings','tips'].forEach(n=>document.getElementById('nb-'+n).className='nav-tab'+(n===v?' on':''));if(v==='tips')loadTips();else render()}
-function card(l){const d=dim.has(l.id),sk=SK(l.source);const ml=l.score?mLevel(l.score):null;const badge=ml?`<span class="match-badge ${ml.c}"><span class="mb-dot"></span>${ml.pct}% · ${ml.t}</span>`:'';const fr=fresh(l.found_at);const freshPill=fr?`<span class="fresh${fr.isNew?' new':''}">🕒 ${fr.txt}</span>`:'';const srcTag=`<span class="src-tag ${sc(l.source)}">${sk}</span>`;const priceTag=l.price?`<div class="img-price"><div class="ip-num">₪${l.price.toLocaleString()}</div><div class="ip-sub">לחודש</div></div>`:'';const inner=`${badge}<div class="img-over"></div>${srcTag}${freshPill}${priceTag}`;const med=ri(l.image)?`<div class="card-img-wrap"><img class="card-img" src="${l.image}" alt="" loading="lazy" onerror="this.outerHTML='<div class=card-banner style=background:${ban(l.source)}>🏠</div>'">${inner}</div>`:`<div class="card-img-wrap"><div class="card-banner" style="background:${ban(l.source)}">🏠</div>${inner}</div>`;const chips=[l.rooms?`<span class="chip c-r">🛏 ${l.rooms} חד'</span>`:'',l.size?`<span class="chip c-s">📐 ${l.size} מ"ר</span>`:'',l.floor?`<span class="chip c-f">קומה ${l.floor}</span>`:''].filter(Boolean).join('');const wl=whyHe(l.reasons);const why=wl.length?`<div class="why"><span class="why-lbl">למה התאים</span>${wl.map(w=>`<span class="why-chip">${w}</span>`).join('')}</div>`:'';const pf=l.price?`<div><div class="price-big">₪${l.price.toLocaleString()}</div><div class="price-mo">לחודש</div></div>`:`<span class="price-unk">מחיר לא צוין</span>`;return`<div class="card${d?' dismissed':''}" id="c-${l.id}">${med}<div class="card-body"><div><div class="addr">${l.address||l.title||'שכונה ב׳'}</div>${l.contact?`<div class="by">${l.contact}</div>`:''}</div>${l.preview?`<div class="prev">${l.preview}</div>`:''}${why}${chips?`<div class="chips">${chips}</div>`:''}<div class="card-foot">${pf}<div class="btns"><a class="btn-open" href="${l.url}" target="_blank" rel="noopener"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>פתח</a><button class="btn-x" onclick="dis('${l.id}')">✕</button></div></div></div></div>`}
+function showView(v){curView=v;document.getElementById('view-listings').style.display=v==='listings'?'':'none';document.getElementById('view-favorites').style.display=v==='favorites'?'':'none';document.getElementById('view-tips').style.display=v==='tips'?'':'none';document.getElementById('meta-bar').style.display=v==='listings'?'':'none';document.getElementById('scan-bar').className='scan-bar';['listings','favorites','tips'].forEach(n=>document.getElementById('nb-'+n).className='nav-tab'+(n===v?' on':''));if(v==='tips')loadTips();else if(v==='favorites')renderFavorites();else render()}
+function card(l){const d=dim.has(l.id),sk=SK(l.source);const ml=l.score?mLevel(l.score):null;const badge=ml?`<span class="match-badge ${ml.c}"><span class="mb-dot"></span>${ml.pct}% · ${ml.t}</span>`:'';const fr=fresh(l.found_at);const freshPill=fr?`<span class="fresh${fr.isNew?' new':''}">🕒 ${fr.txt}</span>`:'';const srcTag=`<span class="src-tag ${sc(l.source)}">${sk}</span>`;const priceTag=l.price?`<div class="img-price"><div class="ip-num">₪${l.price.toLocaleString()}</div><div class="ip-sub">לחודש</div></div>`:'';const inner=`${badge}<div class="img-over"></div>${srcTag}${freshPill}${priceTag}`;const med=ri(l.image)?`<div class="card-img-wrap"><img class="card-img" src="${l.image}" alt="" loading="lazy" onerror="this.outerHTML='<div class=card-banner style=background:${ban(l.source)}>🏠</div>'">${inner}</div>`:`<div class="card-img-wrap"><div class="card-banner" style="background:${ban(l.source)}">🏠</div>${inner}</div>`;const chips=[l.rooms?`<span class="chip c-r">🛏 ${l.rooms} חד'</span>`:'',l.size?`<span class="chip c-s">📐 ${l.size} מ"ר</span>`:'',l.floor?`<span class="chip c-f">קומה ${l.floor}</span>`:''].filter(Boolean).join('');const wl=whyHe(l.reasons);const why=wl.length?`<div class="why"><span class="why-lbl">למה התאים</span>${wl.map(w=>`<span class="why-chip">${w}</span>`).join('')}</div>`:'';const pf=l.price?`<div><div class="price-big">₪${l.price.toLocaleString()}</div><div class="price-mo">לחודש</div></div>`:`<span class="price-unk">מחיר לא צוין</span>`;return`<div class="card${d?' dismissed':''}" id="c-${l.id}">${med}<div class="card-body"><div><div class="addr">${l.address||l.title||'שכונה ב׳'}</div>${l.contact?`<div class="by">${l.contact}</div>`:''}</div>${l.preview?`<div class="prev">${l.preview}</div>`:''}${why}${chips?`<div class="chips">${chips}</div>`:''}<div class="card-foot">${pf}<div class="btns"><button class="btn-fav${fav.has(l.id)?' on':''}" title="הוסף למועדפים" onclick="toggleFav('${l.id}',this)">${heartSVG}</button><a class="btn-open" href="${l.url}" target="_blank" rel="noopener"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>פתח</a><button class="btn-x" onclick="dis('${l.id}')">✕</button></div></div></div></div>`}
 function applyFilters(list){const qel=document.getElementById('q');const q=(qel?qel.value:'').trim().toLowerCase();const srcEl=document.getElementById('src');const src=srcEl?srcEl.value:'all';let r=list.filter(l=>!dim.has(l.id));if(fcls==='new')r=r.filter(l=>{const f=fresh(l.found_at);return f&&f.isNew});else if(fcls==='hot')r=r.filter(l=>(l.score||0)>=12);else if(fcls==='review')r=r.filter(l=>l.classification==='maybe_relevant_rental_apartment'||l.classification==='over_budget');if(src!=='all')r=r.filter(l=>(l.source||'').includes(src));if(q)r=r.filter(l=>((l.address||'')+(l.preview||'')+(l.title||'')+(l.source||'')).toLowerCase().includes(q));const sortEl=document.getElementById('sort');const sort=sortEl?sortEl.value:'fresh';const t=l=>l.found_at?new Date(l.found_at.replace(' ','T')).getTime():0;if(sort==='fresh')r.sort((a,b)=>t(b)-t(a));else if(sort==='score')r.sort((a,b)=>(b.score||0)-(a.score||0));else if(sort==='price_asc')r.sort((a,b)=>(a.price||1e9)-(b.price||1e9));else if(sort==='price_desc')r.sort((a,b)=>(b.price||0)-(a.price||0));return r}
 function renderStats(){const act=all.filter(l=>!dim.has(l.id));const nNew=act.filter(l=>{const f=fresh(l.found_at);return f&&f.isNew}).length;const nHot=act.filter(l=>(l.score||0)>=12).length;const nRev=act.filter(l=>l.classification==='maybe_relevant_rental_apartment'||l.classification==='over_budget').length;const cards=[{k:'all',ico:'🏠',num:act.length,lbl:'דירות פעילות',cls:''},{k:'new',ico:'✨',num:nNew,lbl:'חדש (12 שעות)',cls:'s-new'},{k:'hot',ico:'🔥',num:nHot,lbl:'התאמות מצוינות',cls:'s-hot'},{k:'review',ico:'🔍',num:nRev,lbl:'לבדיקה',cls:'s-rev'}];document.getElementById('stats-strip').innerHTML=cards.map(c=>`<div class="stat ${c.cls}${fcls===c.k?' on':''}" onclick="setFilter('${c.k}')"><div class="stat-ico">${c.ico}</div><div class="stat-num">${c.num}</div><div class="stat-lbl">${c.lbl}</div></div>`).join('')}
 function setFilter(k){fcls=(fcls===k&&k!=='all')?'all':k;render()}
 function render(){renderStats();const g=document.getElementById('grid');const ac=applyFilters(all);if(!ac.length){const qel=document.getElementById('q');const filtered=fcls!=='all'||(qel&&qel.value);const msg=filtered?'נסה לשנות את הסינון או החיפוש.':'לחץ על כפתור הרענן לסרוק עכשיו, או המתן לסריקה האוטומטית.';g.innerHTML=`<div class="empty"><div class="empty-visual"><div class="empty-house">🏡</div><div class="empty-badge">מחפש...</div></div><h3>אין דירות להצגה</h3><p>${msg}</p></div>`;}else{g.innerHTML=ac.map(card).join('');g.querySelectorAll('.card').forEach(c=>io.observe(c))}document.getElementById('arch-n').textContent=dim.size||'';const srcs={};all.filter(l=>!dim.has(l.id)).forEach(l=>{const k=SK(l.source);srcs[k]=(srcs[k]||0)+1});document.getElementById('m-cnt').textContent=`${ac.length} מוצגות`;document.getElementById('m-src').textContent=Object.entries(srcs).map(([k,v])=>`${k} ${v}`).join(' · ');document.getElementById('m-time').textContent=`עודכן ${new Date().toLocaleTimeString('he-IL')}`}
 async function dis(id){await fetch(`/api/dismiss/${encodeURIComponent(id)}`,{method:'POST'});dim.add(id);render();toast('הועבר לארכיון')}
-async function loadData(){const[lR,dR,sR]=await Promise.all([fetch('/api/listings'),fetch('/api/dismissed'),fetch('/api/settings')]);all=await lR.json();dim=new Set(await dR.json());const cfg=await sR.json();const on=cfg.enabled!==false;document.getElementById('ag-dot').className='dot'+(on?'':' off');document.getElementById('ag-lbl').textContent=on?'סוכן פעיל':'מושהה';if(curView==='listings')render()}
+async function loadData(){const[lR,dR,sR,mR,fR]=await Promise.all([fetch('/api/listings'),fetch('/api/dismissed'),fetch('/api/settings'),fetch('/api/me'),fetch('/api/favorites')]);all=await lR.json();dim=new Set(await dR.json());const cfg=await sR.json();me=(await mR.json()).user||'';fav=new Set(await fR.json());const av=document.getElementById('user-av'),nm=document.getElementById('user-name');if(av){av.textContent=(me[0]||'?');}if(nm){nm.textContent=me;}const fw=document.getElementById('fav-who');if(fw)fw.textContent=me;const on=cfg.enabled!==false;document.getElementById('ag-dot').className='dot'+(on?'':' off');document.getElementById('ag-lbl').textContent=on?'סוכן פעיל':'מושהה';if(curView==='listings')render();else if(curView==='favorites')renderFavorites()}
 loadData();setInterval(loadData,60000);
+// ── Favorites (personal area) ──
+async function toggleFav(id,btn){try{const r=await fetch('/api/favorite/'+encodeURIComponent(id),{method:'POST'});const d=await r.json();if(d.favorited){fav.add(id);if(btn)btn.classList.add('on');toast('נוסף למועדפים ❤️');}else{fav.delete(id);if(btn)btn.classList.remove('on');toast('הוסר מהמועדפים');}if(curView==='favorites')renderFavorites();}catch(_){toast('שגיאה')}}
+function renderFavorites(){const g=document.getElementById('fav-grid');const list=all.filter(l=>fav.has(l.id));if(!list.length){g.innerHTML=`<div class="empty"><div class="empty-visual"><div class="empty-house">❤️</div><div class="empty-badge">ריק</div></div><h3>אין עדיין מועדפים</h3><p>לחץ על הלב על דירה כדי לשמור אותה כאן, באזור האישי שלך.</p></div>`;return}g.innerHTML=list.map(card).join('');g.querySelectorAll('.card').forEach(c=>io.observe(c))}
 // ── Live agent activity widget ──
 const AGENTS={facebook:{ico:'📘',name:'Facebook'},yad2:{ico:'🏠',name:'Yad2 + Homely'}};
 const ST_HE={idle:'ממתין לסריקה הבאה',disabled:'מושבת',error:'שגיאה',scanning:'עובד עכשיו…',starting:'מתחיל…'};
@@ -530,6 +558,113 @@ function toast(msg){const el=document.getElementById('toast');clearTimeout(_tt);
 </body>
 </html>"""
 
+
+# ─── Login page ───────────────────────────────────────────────────────────────
+
+LOGIN_HTML = r"""<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>מצאן — כניסה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;direction:rtl;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  background-color:#F2EDE4;background-image:radial-gradient(circle,#C8BDB0 1px,transparent 1px);background-size:26px 26px;-webkit-font-smoothing:antialiased}
+.box{background:#fff;border-radius:24px;box-shadow:0 12px 48px rgba(90,60,20,.16),0 2px 8px rgba(90,60,20,.06);width:100%;max-width:380px;overflow:hidden}
+.box-head{background:linear-gradient(160deg,#0D2B1A 0%,#1A4A2E 55%,#163D24 100%);padding:36px 32px 30px;text-align:center;color:#fff}
+.logo-mark{width:54px;height:54px;border-radius:15px;margin:0 auto 14px;background:linear-gradient(135deg,#4ade80,#16a34a);display:flex;align-items:center;justify-content:center;font-size:27px;box-shadow:0 4px 16px rgba(74,222,128,.4)}
+.box-head h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.box-head p{font-size:13px;color:rgba(255,255,255,.55);margin-top:5px}
+.box-body{padding:30px 32px 34px}
+.fld{margin-bottom:16px}
+.fld label{display:block;font-size:12.5px;font-weight:600;color:#6b5d54;margin-bottom:7px}
+.fld input{width:100%;border:1px solid #e3ddd4;border-radius:12px;padding:13px 15px;font-size:15px;font-family:inherit;color:#111;transition:border .15s,box-shadow .15s}
+.fld input:focus{outline:none;border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.btn{width:100%;background:linear-gradient(135deg,#1A4A2E,#0D2B1A);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:6px;transition:opacity .15s,transform .1s;box-shadow:0 4px 14px rgba(13,43,26,.3)}
+.btn:hover{opacity:.92}.btn:active{transform:translateY(1px)}.btn:disabled{opacity:.6;cursor:default}
+.err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;padding:10px 13px;font-size:13px;font-weight:500;margin-bottom:16px;display:none}
+.err.show{display:block}
+.foot{text-align:center;font-size:11.5px;color:#bbb;margin-top:18px;font-style:italic}
+</style>
+</head>
+<body>
+<form class="box" id="f" onsubmit="return doLogin(event)">
+  <div class="box-head">
+    <div class="logo-mark">🏠</div>
+    <h1>מצאן</h1>
+    <p>הכניסה לאזור האישי</p>
+  </div>
+  <div class="box-body">
+    <div class="err" id="err"></div>
+    <div class="fld"><label>שם משתמש</label><input id="u" autocomplete="username" autofocus placeholder="itay / neta"></div>
+    <div class="fld"><label>סיסמה</label><input id="p" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn" id="b" type="submit">כניסה</button>
+    <div class="foot">מוצא את הדירה שלכם — יחד 💚</div>
+  </div>
+</form>
+<script>
+async function doLogin(e){
+  e.preventDefault();
+  const b=document.getElementById('b'),err=document.getElementById('err');
+  b.disabled=true;b.textContent='מתחבר...';err.className='err';
+  try{
+    const r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:document.getElementById('u').value,password:document.getElementById('p').value})});
+    const d=await r.json();
+    if(d.ok){location.href='/';}
+    else{err.textContent=d.error||'שגיאה';err.className='err show';b.disabled=false;b.textContent='כניסה';}
+  }catch(_){err.textContent='שגיאת תקשורת';err.className='err show';b.disabled=false;b.textContent='כניסה';}
+  return false;
+}
+</script>
+</body>
+</html>"""
+
+
+# ─── Auth: every page/API requires login except /login itself ─────────────────
+
+@app.before_request
+def _require_login():
+    if request.path == "/login" or request.path.startswith("/static"):
+        return
+    if not session.get("user"):
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "auth_required"}), 401
+        return redirect("/login")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        user = (data.get("username") or "").strip().lower()
+        pw   = data.get("password") or ""
+        if app_auth.check_login(user, pw):
+            session.permanent = True
+            session["user"] = user
+            return jsonify({"ok": True})
+        return jsonify({"ok": False, "error": "שם משתמש או סיסמה שגויים"}), 401
+    return render_template_string(LOGIN_HTML)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+@app.route("/api/me")
+def api_me():
+    return jsonify({"user": session.get("user", "")})
+
+@app.route("/api/favorites")
+def api_favorites():
+    return jsonify(app_auth.get_user_favorites(session["user"]))
+
+@app.route("/api/favorite/<path:lid>", methods=["POST"])
+def api_favorite(lid):
+    now_fav = app_auth.toggle_favorite(session["user"], lid)
+    return jsonify({"favorited": now_fav})
 
 
 # ─── API ──────────────────────────────────────────────────────────────────────

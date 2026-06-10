@@ -8,16 +8,10 @@ services:
     expose:
       - "5050"                        # INTERNAL only — reachable by caddy, NOT published to the host
     volumes:
-      # Persist data + Facebook login + logs across container restarts
-      - ./all_listings.json:/app/all_listings.json
-      - ./seen_listings.json:/app/seen_listings.json
-      - ./seen_fb_posts.json:/app/seen_fb_posts.json
-      - ./sent_telegram.json:/app/sent_telegram.json
-      - ./dismissed.json:/app/dismissed.json
-      - ./settings.json:/app/settings.json
-      - ./tips.json:/app/tips.json
-      - ./fb_chrome_profile:/app/fb_chrome_profile
-      - ./logs:/app/logs
+      # Mount the whole project dir so ALL data files (listings, favorites,
+      # users, sessions, Facebook login, logs) live on the host and persist.
+      # This also avoids the "missing file becomes a directory" bind-mount trap.
+      - .:/app
     shm_size: "1gb"                   # Chromium needs shared memory
 
   # ── Caddy: public HTTPS + login in front of the private dashboard ──
