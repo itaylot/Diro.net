@@ -6,6 +6,7 @@ Open: http://localhost:5050
 
 import app_env  # noqa: F401 — forces UTF-8 stdout + loads .env (must be first)
 import app_auth
+import app_tracking
 import json, re, socket, threading, time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -396,6 +397,54 @@ body{
 .btn-fav.on .h-empty{display:none}.btn-fav.on .h-full{display:inline;animation:hpop .35s cubic-bezier(.34,1.56,.64,1)}
 @keyframes hpop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
 
+/* ADD-APARTMENT button (header) */
+.add-btn{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 15px;border-radius:10px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .15s}
+.add-btn:hover{background:rgba(255,255,255,.24)}
+
+/* CENTERED MODAL (add apartment) */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal{background:#fff;border-radius:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:min .25s cubic-bezier(.34,1.4,.64,1)}
+@keyframes min{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #eee}
+.modal-head h3{font-size:17px;font-weight:800}
+.modal-body{padding:22px 24px}
+.mf{margin-bottom:14px}
+.mf label{display:block;font-size:12px;font-weight:600;color:#6b5d54;margin-bottom:6px}
+.mf input,.mf textarea,.mf select{width:100%;border:1px solid #e3ddd4;border-radius:10px;padding:11px 13px;font-size:14px;font-family:inherit;color:#111;background:#fff}
+.mf textarea{resize:vertical;min-height:70px}
+.mf input:focus,.mf textarea:focus,.mf select:focus{outline:none;border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
+.mf-row{display:flex;gap:10px}.mf-row .mf{flex:1}
+
+/* TRACKING BOARD */
+.trk-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.trk-head h2{font-size:26px;font-weight:800;letter-spacing:-.5px}
+.trk-head p{font-size:14px;color:#888;margin-top:4px}
+.trk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px}
+.trk-card{background:#fff;border-radius:18px;border:1px solid rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(90,60,20,.06),0 8px 28px rgba(90,60,20,.04);padding:18px 20px;display:flex;flex-direction:column;gap:12px;border-top:4px solid #cbd5e1}
+.trk-card.st-to_contact{border-top-color:#3b82f6}.trk-card.st-scheduled{border-top-color:#a855f7}.trk-card.st-visited{border-top-color:#f59e0b}.trk-card.st-candidate{border-top-color:#22c55e}.trk-card.st-rejected{border-top-color:#ef4444;opacity:.7}
+.trk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.trk-addr{font-size:16px;font-weight:800;color:#111;line-height:1.3}
+.trk-sub{font-size:12px;color:#9a8f84;margin-top:3px}
+.trk-status-sel{border:1px solid #e3ddd4;border-radius:8px;padding:6px 8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:#fafaf8;color:#444}
+.trk-meta{display:flex;flex-wrap:wrap;gap:7px}
+.trk-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;background:#f5f4f1;color:#555;border:1px solid #e8e5e0;padding:5px 11px;border-radius:100px}
+.trk-field{display:flex;flex-direction:column;gap:5px}
+.trk-field label{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#bbb}
+.trk-field input,.trk-field textarea{border:1px solid #ece8e2;border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;color:#222;background:#fcfbf9;width:100%}
+.trk-field textarea{resize:vertical;min-height:54px}
+.trk-field input:focus,.trk-field textarea:focus{outline:none;border-color:#16a34a;background:#fff;box-shadow:0 0 0 3px rgba(22,163,74,.08)}
+.stars{display:flex;gap:3px;font-size:20px;cursor:pointer;user-select:none}
+.star{color:#e0d9cf;transition:transform .1s}.star.on{color:#f59e0b}.star:hover{transform:scale(1.15)}
+.trk-actions{display:flex;gap:7px;flex-wrap:wrap;border-top:1px solid #f5f4f1;padding-top:12px}
+.trk-act{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:5px;border:1px solid #e8e5e0;background:#fff;border-radius:9px;padding:9px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;color:#444;text-decoration:none;transition:all .15s}
+.trk-act:hover{background:#f7f6f3}
+.trk-act.call:hover{background:#f0fdf4;border-color:#bbf7d0;color:#16a34a}
+.trk-act.nav:hover{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.trk-act.del:hover{background:#fef2f2;border-color:#fecaca;color:#dc2626}
+.btn-track{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e8e5e0;border-radius:11px;cursor:pointer;font-size:15px;line-height:1;padding:0;transition:all .15s}
+.btn-track:hover{background:#f5f3ff;border-color:#ddd6fe}
+
 @media(max-width:640px){
   .hdr{padding:0 18px;height:58px}
   .logo-tagline,.live-pill{display:none}
@@ -417,9 +466,11 @@ body{
     <div class="hdr-nav">
       <button class="nav-tab on" id="nb-listings" onclick="showView('listings')">דירות</button>
       <button class="nav-tab"    id="nb-favorites" onclick="showView('favorites')">❤️ המועדפים שלי</button>
+      <button class="nav-tab"    id="nb-tracking" onclick="showView('tracking')">📋 מעקב</button>
       <button class="nav-tab"    id="nb-tips"     onclick="showView('tips')">💡 טיפים</button>
     </div>
     <div class="hdr-right">
+      <button class="add-btn" onclick="openAdd()" title="הוסף דירה שמצאת">➕ הוסף דירה</button>
       <div class="user-pill"><span class="user-av" id="user-av">?</span><span id="user-name">…</span><button class="logout-btn" onclick="location.href='/logout'">יציאה</button></div>
       <div class="live-pill"><span class="dot" id="ag-dot"></span><span id="ag-lbl">טוען</span></div>
       <div class="arch-pill" onclick="openArchive()">
@@ -469,6 +520,13 @@ body{
   <div class="tips-header"><h2>❤️ המועדפים של <span id="fav-who">…</span></h2><p>הדירות שסימנת בלב — אזור אישי שרק שלך</p></div>
   <div class="grid" id="fav-grid"></div>
 </div>
+<div class="page" id="view-tracking" style="display:none">
+  <div class="trk-head">
+    <div><h2>📋 מעקב דירות</h2><p>הדירות שאתם בודקים כרגע — לוח משותף לשניכם</p></div>
+    <button class="btn-add" onclick="openTrackAdd()">➕ הוסף למעקב ידנית</button>
+  </div>
+  <div class="trk-grid" id="trk-grid"></div>
+</div>
 <div class="page" id="view-tips" style="display:none">
   <div class="tips-header"><h2>💡 טיפים לחיפוש דירה</h2><p>עצות ומידע שיעזרו לך למצוא ולשכור דירה טובה</p></div>
   <div class="tips-grid" id="tips-grid">
@@ -493,6 +551,24 @@ body{
     <div class="s-blk"><div class="s-ttl">קבוצות פייסבוק</div><div id="grps"></div><div style="margin-top:12px;background:#fff;border-radius:11px;padding:16px;border:1px solid #e8e5e0"><div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#bbb;margin-bottom:12px">הוסף קבוצה</div><div class="add-row"><input type="text" id="g-s" placeholder="חפש שם קבוצה..."><button class="btn-add" onclick="fbS()">פתח</button></div><div style="font-size:12.5px;font-weight:500;color:#888;margin:10px 0 5px">הדבק URL:</div><div class="add-row"><input type="text" id="g-u" placeholder="facebook.com/groups/..." style="direction:ltr;text-align:left" oninput="prevG(this.value)"></div><div id="g-prev" style="font-size:12px;min-height:18px;margin-top:5px;font-weight:500"></div><div style="font-size:12.5px;font-weight:500;color:#888;margin:10px 0 5px">שם לקבוצה:</div><div class="add-row"><input type="text" id="g-n" placeholder="שם לתצוגה"><button class="btn-add" onclick="addG()">+ הוסף</button></div></div><button class="s-btn" style="margin-top:12px" onclick="saveG()">שמור קבוצות</button></div>
   </div>
 </div>
+<div class="modal-ov" id="add-ov" onclick="if(event.target===this)closeAdd()">
+  <div class="modal">
+    <div class="modal-head"><h3 id="add-title">➕ הוסף דירה</h3><button class="ph-close" onclick="closeAdd()">✕</button></div>
+    <div class="modal-body">
+      <div class="mf"><label>כתובת / תיאור הדירה</label><input id="a-addr" placeholder="רחוב מצדה 5, שכונה ב׳"></div>
+      <div class="mf-row">
+        <div class="mf"><label>מחיר לחודש (₪)</label><input id="a-price" type="number" placeholder="3500"></div>
+        <div class="mf"><label>חדרים</label><input id="a-rooms" type="number" step="0.5" placeholder="3"></div>
+      </div>
+      <div class="mf"><label>איש קשר / טלפון</label><input id="a-contact" placeholder="דנה · 050-1234567"></div>
+      <div class="mf"><label>קישור למודעה (אופציונלי)</label><input id="a-url" placeholder="https://..." dir="ltr"></div>
+      <div class="mf trk-only" style="display:none"><label>סטטוס</label><select id="a-status"></select></div>
+      <div class="mf trk-only" style="display:none"><label>מתי מראים את הבית</label><input id="a-viewing" placeholder="לדוגמה: ראשון 18:00"></div>
+      <div class="mf"><label>הערות / מה חשבנו</label><textarea id="a-notes" placeholder="התרשמות, יתרונות, חסרונות, שאלות לבעל הבית..."></textarea></div>
+      <button class="s-btn" id="a-save" onclick="submitAdd()">שמור</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script>
 let all=[],dim=new Set(),curView='listings',fav=new Set(),me='';
@@ -508,8 +584,8 @@ function mLevel(sc){sc=sc||0;const pct=Math.max(40,Math.min(99,Math.round(sc/18*
 const RHE={rental_keyword:'מודעת השכרה',availability_keyword:'כניסה/זמינה',dedicated_group:'שכונה ב׳',date_found:'תאריך כניסה',suitable_for_couple:'מתאים לזוג',studio_or_unit:'יחידת דיור'};
 function whyHe(rs){if(!rs)return[];const out=[];rs.forEach(r=>{if(r.indexOf('location:')===0)out.push('מיקום: '+r.split(':')[1]);else if(RHE[r])out.push(RHE[r])});return[...new Set(out)].slice(0,4)}
 function fresh(ts){if(!ts)return null;const d=new Date(ts.replace(' ','T'));if(isNaN(d))return null;const m=(Date.now()-d)/60000;let txt;if(m<60)txt='לפני '+Math.max(0,Math.round(m))+' דק׳';else if(m<1440)txt='לפני '+Math.floor(m/60)+' שעות';else txt='לפני '+Math.floor(m/1440)+' ימים';return{txt,isNew:m<720}}
-function showView(v){curView=v;document.getElementById('view-listings').style.display=v==='listings'?'':'none';document.getElementById('view-favorites').style.display=v==='favorites'?'':'none';document.getElementById('view-tips').style.display=v==='tips'?'':'none';document.getElementById('meta-bar').style.display=v==='listings'?'':'none';document.getElementById('scan-bar').className='scan-bar';['listings','favorites','tips'].forEach(n=>document.getElementById('nb-'+n).className='nav-tab'+(n===v?' on':''));if(v==='tips')loadTips();else if(v==='favorites')renderFavorites();else render()}
-function card(l){const d=dim.has(l.id),sk=SK(l.source);const ml=l.score?mLevel(l.score):null;const badge=ml?`<span class="match-badge ${ml.c}"><span class="mb-dot"></span>${ml.pct}% · ${ml.t}</span>`:'';const fr=fresh(l.found_at);const freshPill=fr?`<span class="fresh${fr.isNew?' new':''}">🕒 ${fr.txt}</span>`:'';const srcTag=`<span class="src-tag ${sc(l.source)}">${sk}</span>`;const priceTag=l.price?`<div class="img-price"><div class="ip-num">₪${l.price.toLocaleString()}</div><div class="ip-sub">לחודש</div></div>`:'';const inner=`${badge}<div class="img-over"></div>${srcTag}${freshPill}${priceTag}`;const med=ri(l.image)?`<div class="card-img-wrap"><img class="card-img" src="${l.image}" alt="" loading="lazy" onerror="this.outerHTML='<div class=card-banner style=background:${ban(l.source)}>🏠</div>'">${inner}</div>`:`<div class="card-img-wrap"><div class="card-banner" style="background:${ban(l.source)}">🏠</div>${inner}</div>`;const chips=[l.rooms?`<span class="chip c-r">🛏 ${l.rooms} חד'</span>`:'',l.size?`<span class="chip c-s">📐 ${l.size} מ"ר</span>`:'',l.floor?`<span class="chip c-f">קומה ${l.floor}</span>`:''].filter(Boolean).join('');const wl=whyHe(l.reasons);const why=wl.length?`<div class="why"><span class="why-lbl">למה התאים</span>${wl.map(w=>`<span class="why-chip">${w}</span>`).join('')}</div>`:'';const pf=l.price?`<div><div class="price-big">₪${l.price.toLocaleString()}</div><div class="price-mo">לחודש</div></div>`:`<span class="price-unk">מחיר לא צוין</span>`;return`<div class="card${d?' dismissed':''}" id="c-${l.id}">${med}<div class="card-body"><div><div class="addr">${l.address||l.title||'שכונה ב׳'}</div>${l.contact?`<div class="by">${l.contact}</div>`:''}</div>${l.preview?`<div class="prev">${l.preview}</div>`:''}${why}${chips?`<div class="chips">${chips}</div>`:''}<div class="card-foot">${pf}<div class="btns"><button class="btn-fav${fav.has(l.id)?' on':''}" title="הוסף למועדפים" onclick="toggleFav('${l.id}',this)">${heartSVG}</button><a class="btn-open" href="${l.url}" target="_blank" rel="noopener"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>פתח</a><button class="btn-x" onclick="dis('${l.id}')">✕</button></div></div></div></div>`}
+function showView(v){curView=v;['listings','favorites','tracking','tips'].forEach(n=>document.getElementById('view-'+n).style.display=v===n?'':'none');document.getElementById('meta-bar').style.display=v==='listings'?'':'none';document.getElementById('scan-bar').className='scan-bar';['listings','favorites','tracking','tips'].forEach(n=>document.getElementById('nb-'+n).className='nav-tab'+(n===v?' on':''));if(v==='tips')loadTips();else if(v==='favorites')renderFavorites();else if(v==='tracking')loadTracking();else render()}
+function card(l){const d=dim.has(l.id),sk=SK(l.source);const ml=l.score?mLevel(l.score):null;const badge=ml?`<span class="match-badge ${ml.c}"><span class="mb-dot"></span>${ml.pct}% · ${ml.t}</span>`:'';const fr=fresh(l.found_at);const freshPill=fr?`<span class="fresh${fr.isNew?' new':''}">🕒 ${fr.txt}</span>`:'';const srcTag=`<span class="src-tag ${sc(l.source)}">${sk}</span>`;const priceTag=l.price?`<div class="img-price"><div class="ip-num">₪${l.price.toLocaleString()}</div><div class="ip-sub">לחודש</div></div>`:'';const inner=`${badge}<div class="img-over"></div>${srcTag}${freshPill}${priceTag}`;const med=ri(l.image)?`<div class="card-img-wrap"><img class="card-img" src="${l.image}" alt="" loading="lazy" onerror="this.outerHTML='<div class=card-banner style=background:${ban(l.source)}>🏠</div>'">${inner}</div>`:`<div class="card-img-wrap"><div class="card-banner" style="background:${ban(l.source)}">🏠</div>${inner}</div>`;const chips=[l.rooms?`<span class="chip c-r">🛏 ${l.rooms} חד'</span>`:'',l.size?`<span class="chip c-s">📐 ${l.size} מ"ר</span>`:'',l.floor?`<span class="chip c-f">קומה ${l.floor}</span>`:''].filter(Boolean).join('');const wl=whyHe(l.reasons);const why=wl.length?`<div class="why"><span class="why-lbl">למה התאים</span>${wl.map(w=>`<span class="why-chip">${w}</span>`).join('')}</div>`:'';const pf=l.price?`<div><div class="price-big">₪${l.price.toLocaleString()}</div><div class="price-mo">לחודש</div></div>`:`<span class="price-unk">מחיר לא צוין</span>`;return`<div class="card${d?' dismissed':''}" id="c-${l.id}">${med}<div class="card-body"><div><div class="addr">${l.address||l.title||'שכונה ב׳'}</div>${l.contact?`<div class="by">${l.contact}</div>`:''}</div>${l.preview?`<div class="prev">${l.preview}</div>`:''}${why}${chips?`<div class="chips">${chips}</div>`:''}<div class="card-foot">${pf}<div class="btns"><button class="btn-fav${fav.has(l.id)?' on':''}" title="הוסף למועדפים" onclick="toggleFav('${l.id}',this)">${heartSVG}</button><button class="btn-track" title="הוסף למעקב" onclick="addCardToTrack('${l.id}')">📋</button><a class="btn-open" href="${l.url}" target="_blank" rel="noopener"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>פתח</a><button class="btn-x" onclick="dis('${l.id}')">✕</button></div></div></div></div>`}
 function applyFilters(list){const qel=document.getElementById('q');const q=(qel?qel.value:'').trim().toLowerCase();const srcEl=document.getElementById('src');const src=srcEl?srcEl.value:'all';let r=list.filter(l=>!dim.has(l.id));if(fcls==='new')r=r.filter(l=>{const f=fresh(l.found_at);return f&&f.isNew});else if(fcls==='hot')r=r.filter(l=>(l.score||0)>=12);else if(fcls==='review')r=r.filter(l=>l.classification==='maybe_relevant_rental_apartment'||l.classification==='over_budget');if(src!=='all')r=r.filter(l=>(l.source||'').includes(src));if(q)r=r.filter(l=>((l.address||'')+(l.preview||'')+(l.title||'')+(l.source||'')).toLowerCase().includes(q));const sortEl=document.getElementById('sort');const sort=sortEl?sortEl.value:'fresh';const t=l=>l.found_at?new Date(l.found_at.replace(' ','T')).getTime():0;if(sort==='fresh')r.sort((a,b)=>t(b)-t(a));else if(sort==='score')r.sort((a,b)=>(b.score||0)-(a.score||0));else if(sort==='price_asc')r.sort((a,b)=>(a.price||1e9)-(b.price||1e9));else if(sort==='price_desc')r.sort((a,b)=>(b.price||0)-(a.price||0));return r}
 function renderStats(){const act=all.filter(l=>!dim.has(l.id));const nNew=act.filter(l=>{const f=fresh(l.found_at);return f&&f.isNew}).length;const nHot=act.filter(l=>(l.score||0)>=12).length;const nRev=act.filter(l=>l.classification==='maybe_relevant_rental_apartment'||l.classification==='over_budget').length;const cards=[{k:'all',ico:'🏠',num:act.length,lbl:'דירות פעילות',cls:''},{k:'new',ico:'✨',num:nNew,lbl:'חדש (12 שעות)',cls:'s-new'},{k:'hot',ico:'🔥',num:nHot,lbl:'התאמות מצוינות',cls:'s-hot'},{k:'review',ico:'🔍',num:nRev,lbl:'לבדיקה',cls:'s-rev'}];document.getElementById('stats-strip').innerHTML=cards.map(c=>`<div class="stat ${c.cls}${fcls===c.k?' on':''}" onclick="setFilter('${c.k}')"><div class="stat-ico">${c.ico}</div><div class="stat-num">${c.num}</div><div class="stat-lbl">${c.lbl}</div></div>`).join('')}
 function setFilter(k){fcls=(fcls===k&&k!=='all')?'all':k;render()}
@@ -520,6 +596,29 @@ loadData();setInterval(loadData,60000);
 // ── Favorites (personal area) ──
 async function toggleFav(id,btn){try{const r=await fetch('/api/favorite/'+encodeURIComponent(id),{method:'POST'});const d=await r.json();if(d.favorited){fav.add(id);if(btn)btn.classList.add('on');toast('נוסף למועדפים ❤️');}else{fav.delete(id);if(btn)btn.classList.remove('on');toast('הוסר מהמועדפים');}if(curView==='favorites')renderFavorites();}catch(_){toast('שגיאה')}}
 function renderFavorites(){const g=document.getElementById('fav-grid');const list=all.filter(l=>fav.has(l.id));if(!list.length){g.innerHTML=`<div class="empty"><div class="empty-visual"><div class="empty-house">❤️</div><div class="empty-badge">ריק</div></div><h3>אין עדיין מועדפים</h3><p>לחץ על הלב על דירה כדי לשמור אותה כאן, באזור האישי שלך.</p></div>`;return}g.innerHTML=list.map(card).join('');g.querySelectorAll('.card').forEach(c=>io.observe(c))}
+// ── Add apartment (manual) + tracking board ──
+const TRK_ST={to_contact:'ליצור קשר',scheduled:'נקבעה צפייה',visited:'ראינו',candidate:'מועמדת מובילה',rejected:'נפסל'};
+const val=id=>document.getElementById(id).value.trim();
+let addMode='listing';
+function clearAddForm(){['a-addr','a-price','a-rooms','a-contact','a-url','a-viewing','a-notes'].forEach(id=>document.getElementById(id).value='')}
+function openAdd(){addMode='listing';document.getElementById('add-title').textContent='➕ הוסף דירה שמצאתם';document.querySelectorAll('.trk-only').forEach(e=>e.style.display='none');clearAddForm();document.getElementById('add-ov').classList.add('open')}
+function openTrackAdd(){addMode='tracking';document.getElementById('add-title').textContent='➕ הוסף דירה למעקב';document.getElementById('a-status').innerHTML=Object.entries(TRK_ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');document.querySelectorAll('.trk-only').forEach(e=>e.style.display='');clearAddForm();document.getElementById('add-ov').classList.add('open')}
+function closeAdd(){document.getElementById('add-ov').classList.remove('open')}
+async function submitAdd(){const p={address:val('a-addr'),price:val('a-price'),rooms:val('a-rooms'),contact:val('a-contact'),url:val('a-url'),notes:val('a-notes')};const b=document.getElementById('a-save');b.disabled=true;
+  try{if(addMode==='tracking'){p.status=val('a-status');p.viewing_date=val('a-viewing');const d=await(await fetch('/api/tracking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok){closeAdd();toast('נוסף למעקב 📋');loadTracking();}else toast('שגיאה');}
+  else{if(!p.address&&!p.url){toast('צריך כתובת או קישור');b.disabled=false;return;}const d=await(await fetch('/api/add_listing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok){closeAdd();toast('הדירה נוספה ✓');await loadData();showView('listings');}else toast(d.error||'שגיאה');}}
+  finally{b.disabled=false}}
+let trk=[];
+async function loadTracking(){try{trk=await(await fetch('/api/tracking')).json();renderTracking();}catch(_){}}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function starsHtml(id,r){let h='';for(let i=1;i<=5;i++)h+=`<span class="star${i<=r?' on':''}" onclick="setRating('${id}',${i})">★</span>`;return h}
+function trkCard(t){const phone=(t.contact||'').replace(/[^0-9+]/g,'');const callBtn=phone.length>=7?`<a class="trk-act call" href="tel:${phone}">📞 התקשר</a>`:'';const navBtn=t.address?`<a class="trk-act nav" href="https://www.google.com/maps/search/${encodeURIComponent(t.address+' באר שבע')}" target="_blank" rel="noopener">🗺 ניווט</a>`:'';const openBtn=t.url?`<a class="trk-act" href="${t.url}" target="_blank" rel="noopener">🔗 מודעה</a>`:'';const sub=[t.price?'₪'+t.price:'',t.rooms?t.rooms+' חד׳':'',t.added_by?'הוסיף: '+t.added_by:''].filter(Boolean).join(' · ');
+  return `<div class="trk-card st-${t.status}" id="t-${t.id}"><div class="trk-top"><div><div class="trk-addr">${esc(t.address)||'דירה'}</div><div class="trk-sub">${sub}</div></div><select class="trk-status-sel" onchange="setField('${t.id}','status',this.value)">${Object.entries(TRK_ST).map(([k,v])=>`<option value="${k}"${k===t.status?' selected':''}>${v}</option>`).join('')}</select></div>${t.contact?`<div class="trk-meta"><span class="trk-chip">👤 ${esc(t.contact)}</span></div>`:''}<div class="trk-field"><label>מתי מראים את הבית</label><input value="${esc(t.viewing_date)}" placeholder="לדוגמה: ראשון 18:00" onchange="setField('${t.id}','viewing_date',this.value)"></div><div class="trk-field"><label>דירוג</label><div class="stars">${starsHtml(t.id,t.rating||0)}</div></div><div class="trk-field"><label>הערות / מה חשבנו</label><textarea placeholder="התרשמות, יתרונות, חסרונות..." onchange="setField('${t.id}','notes',this.value)">${esc(t.notes)}</textarea></div><div class="trk-actions">${callBtn}${navBtn}${openBtn}<button class="trk-act del" onclick="delTrk('${t.id}')">🗑 הסר</button></div></div>`}
+function renderTracking(){const g=document.getElementById('trk-grid');if(!trk.length){g.innerHTML=`<div class="empty"><div class="empty-visual"><div class="empty-house">📋</div><div class="empty-badge">ריק</div></div><h3>אין דירות במעקב</h3><p>לחץ "➕ הוסף למעקב", או על 📋 בכרטיס דירה כדי להעביר אותה לכאן.</p></div>`;return}g.innerHTML=trk.map(trkCard).join('')}
+async function setField(id,field,value){await fetch('/api/tracking/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});const t=trk.find(x=>x.id===id);if(t){t[field]=value;if(field==='status'){const el=document.getElementById('t-'+id);if(el)el.className='trk-card st-'+value;}}toast('נשמר ✓')}
+async function setRating(id,r){await setField(id,'rating',r);const el=document.getElementById('t-'+id);if(el)el.querySelectorAll('.star').forEach((s,i)=>s.className='star'+(i<r?' on':''))}
+async function delTrk(id){if(!confirm('להסיר את הדירה מהמעקב?'))return;await fetch('/api/tracking/'+id,{method:'DELETE'});trk=trk.filter(x=>x.id!==id);renderTracking();toast('הוסר מהמעקב')}
+async function addCardToTrack(id){const l=(all.find(x=>x.id===id)||{});const p={address:l.address||l.title||'',price:l.price||'',rooms:l.rooms||'',contact:l.contact||'',url:l.url||'',source_id:id,status:'to_contact'};const d=await(await fetch('/api/tracking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok)toast('נוסף למעקב 📋 — ראה בטאב "מעקב"');else toast('שגיאה')}
 // ── Live agent activity widget ──
 const AGENTS={facebook:{ico:'📘',name:'Facebook'},yad2:{ico:'🏠',name:'Yad2 + Homely'}};
 const ST_HE={idle:'ממתין לסריקה הבאה',disabled:'מושבת',error:'שגיאה',scanning:'עובד עכשיו…',starting:'מתחיל…'};
@@ -665,6 +764,72 @@ def api_favorites():
 def api_favorite(lid):
     now_fav = app_auth.toggle_favorite(session["user"], lid)
     return jsonify({"favorited": now_fav})
+
+
+# ─── Manually-added listings ("apartments we found ourselves") ────────────────
+
+@app.route("/api/add_listing", methods=["POST"])
+def api_add_listing():
+    d = request.get_json(silent=True) or {}
+    addr = (d.get("address") or "").strip()
+    if not addr and not (d.get("url") or "").strip():
+        return jsonify({"ok": False, "error": "צריך לפחות כתובת או קישור"}), 400
+    try:
+        price = int(d.get("price") or 0)
+    except Exception:
+        price = 0
+    try:
+        rooms = float(d.get("rooms") or 0)
+    except Exception:
+        rooms = 0
+    notes = (d.get("notes") or "").strip()
+    lst = {
+        "id": "manual_" + datetime.now().strftime("%Y%m%d%H%M%S%f"),
+        "source": "ידני — נמצא על ידינו",
+        "title": addr or "דירה שנמצאה",
+        "address": addr or "דירה שנמצאה",
+        "price": price,
+        "rooms": rooms,
+        "floor": (d.get("floor") or "").strip(),
+        "size": (d.get("size") or "").strip(),
+        "image": "",
+        "url": (d.get("url") or "").strip(),
+        "preview": notes,
+        "contact": (d.get("contact") or "").strip(),
+        "classification": "relevant_rental_apartment",
+        "score": 0,
+        "reasons": ["נוסף ידנית"],
+        "found_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "manual": True,
+    }
+    existing = {item["id"]: item for item in load_listings()}
+    existing[lst["id"]] = lst
+    LISTINGS_FILE.write_text(
+        json.dumps(list(reversed(list(existing.values()))), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return jsonify({"ok": True, "listing": lst})
+
+
+# ─── Tracking board (shared) ──────────────────────────────────────────────────
+
+@app.route("/api/tracking", methods=["GET"])
+def api_tracking_list():
+    return jsonify(app_tracking.load_tracking())
+
+@app.route("/api/tracking", methods=["POST"])
+def api_tracking_add():
+    item = app_tracking.add_item(request.get_json(silent=True) or {}, session["user"])
+    return jsonify({"ok": True, "item": item})
+
+@app.route("/api/tracking/<item_id>", methods=["POST"])
+def api_tracking_update(item_id):
+    item = app_tracking.update_item(item_id, request.get_json(silent=True) or {})
+    return jsonify({"ok": bool(item), "item": item})
+
+@app.route("/api/tracking/<item_id>", methods=["DELETE"])
+def api_tracking_delete(item_id):
+    return jsonify({"ok": app_tracking.delete_item(item_id)})
 
 
 # ─── API ──────────────────────────────────────────────────────────────────────
