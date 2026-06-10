@@ -1,4 +1,4 @@
-# מצאן — all-in-one image (Chromium baked in for Selenium)
+# דירונט — all-in-one image (Chromium baked in for Selenium)
 FROM python:3.12-slim
 
 # Chromium + driver + the libs Selenium needs to render Facebook/Yad2

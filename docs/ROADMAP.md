@@ -1,4 +1,4 @@
-# 🦅 מצאן — The Unfair Vision
+# 🦅 דירונט — The Unfair Vision
 
 > This document replaces the previous roadmap entirely. It is the converged output of a five-agent skunkworks debate (OpenAI · Airbnb · Palantir · Anduril) stress-tested by a contrarian red-team.
 > It contains ONLY: game-changing ideas, high-leverage architecture, autonomous-agent concepts, AI-native workflows, and ideas that would surprise an experienced engineer.
@@ -114,13 +114,13 @@ Each day: "3 new, 1 worth your time, 1 I already ruled out (scam), 1 I'm watchin
 
 ---
 
-## 🏁 The Question: If מצאן became the best apartment-hunting system in Israel, what would it look like?
+## 🏁 The Question: If דירונט became the best apartment-hunting system in Israel, what would it look like?
 
 It would not look like a website with listings on it.
 
 It would feel like **the couple hired a brilliant, tireless, slightly paranoid local broker who works only for them** — and who happens to operate at machine speed.
 
-At 02:14 a near-perfect flat is posted in a Facebook group. By 02:15 מצאן has already: confirmed it isn't a duplicate or a scam, read between every line of the post, checked the real 7:40am bus time to Soroka, compared it to every flat ever seen on that street, drafted a warm message in the couple's own voice, and placed a single glowing card on both partners' phones with one button: **"אשר ושלח."** No one is awake. At 07:30 one partner taps it over coffee; by 07:31 the message is sent — *first in line, sounding human, partner already aligned.* By Friday, the digest they screenshot to their parents says "we found it."
+At 02:14 a near-perfect flat is posted in a Facebook group. By 02:15 דירונט has already: confirmed it isn't a duplicate or a scam, read between every line of the post, checked the real 7:40am bus time to Soroka, compared it to every flat ever seen on that street, drafted a warm message in the couple's own voice, and placed a single glowing card on both partners' phones with one button: **"אשר ושלח."** No one is awake. At 07:30 one partner taps it over coffee; by 07:31 the message is sent — *first in line, sounding human, partner already aligned.* By Friday, the digest they screenshot to their parents says "we found it."
 
 The market would feel, to this one couple, **unfair** — as if everyone else were searching with their eyes closed. They wouldn't say "that app was useful." They'd say **"we found it together,"** and they wouldn't quite be able to explain to their friends why it felt like cheating.
 

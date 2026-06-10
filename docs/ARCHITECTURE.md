@@ -1,4 +1,4 @@
-# 🏗️ מצאן — Architecture & How It Works
+# 🏗️ דירונט — Architecture & How It Works
 
 > Purpose of this doc: so you can sit in an interview, draw the system on a whiteboard, and explain every box and arrow with confidence.
 
@@ -6,7 +6,7 @@
 
 ## 1. One-paragraph summary
 
-מצאן is a small **distributed system of independent worker processes** that monitor apartment sources (Yad2, Homely, Facebook groups), run each listing through a **deterministic classifier**, store results in **flat JSON files**, and surface them through two **read interfaces**: a Flask **web dashboard** and a **Telegram bot**. A **supervisor process** keeps everything running 24/7. It is intentionally built from simple, industry-standard parts so it can be understood and owned by one person.
+דירונט is a small **distributed system of independent worker processes** that monitor apartment sources (Yad2, Homely, Facebook groups), run each listing through a **deterministic classifier**, store results in **flat JSON files**, and surface them through two **read interfaces**: a Flask **web dashboard** and a **Telegram bot**. A **supervisor process** keeps everything running 24/7. It is intentionally built from simple, industry-standard parts so it can be understood and owned by one person.
 
 ---
 

@@ -1,8 +1,8 @@
 services:
   # ── The app: dashboard + bot + scanners (run by run_all.py) ──
-  matzan:
+  dironet:
     build: .
-    container_name: matzan
+    container_name: dironet
     restart: unless-stopped          # survive crashes AND server reboots
     env_file: .env
     expose:
@@ -28,7 +28,7 @@ services:
       - caddy_data:/data              # stores TLS certificates — MUST persist
       - caddy_config:/config
     depends_on:
-      - matzan
+      - dironet
 
 volumes:
   caddy_data:

@@ -1,4 +1,4 @@
-# Project State — מצאן
+# Project State — דירונט
 Last updated: 2026-06-09
 
 ## Status

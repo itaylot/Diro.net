@@ -1,5 +1,5 @@
 """
-run_all.py — מצאן process supervisor.
+run_all.py — דירונט process supervisor.
 
 Runs ALL parts of the system as child processes and keeps them alive 24/7:
   • dashboard.py        — the web UI
@@ -116,7 +116,7 @@ def daily_tips():
 
 def main():
     print("=" * 60)
-    print("  מצאן — מפעיל את כל המערכת (Ctrl+C לעצירה)")
+    print("  דירונט — מפעיל את כל המערכת (Ctrl+C לעצירה)")
     print(f"  לוגים: {LOGS}")
     print("=" * 60)
 

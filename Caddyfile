@@ -1,4 +1,4 @@
-# מצאן — Caddy reverse-proxy config (committed template — NO secrets here).
+# דירונט — Caddy reverse-proxy config (committed template — NO secrets here).
 #
 # Caddy's job here is simple:
 #   • Automatic HTTPS (Let's Encrypt certificate, auto-renewed)
@@ -11,5 +11,5 @@
 #   SITE_ADDRESS   your domain, e.g.  dironet.duckdns.org
 
 {$SITE_ADDRESS} {
-    reverse_proxy matzan:5050
+    reverse_proxy dironet:5050
 }

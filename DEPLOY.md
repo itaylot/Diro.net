@@ -1,4 +1,4 @@
-# 🚀 מצאן — Deployment Guide
+# 🚀 דירונט — Deployment Guide
 
 Turn this from a local prototype into a 24/7 product you and your girlfriend open from your phones.
 
@@ -172,16 +172,16 @@ python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 
 # install the service (edit User=/WorkingDirectory= inside the file first)
-sudo cp deploy/matzan.service /etc/systemd/system/matzan.service
+sudo cp deploy/dironet.service /etc/systemd/system/dironet.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now matzan
+sudo systemctl enable --now dironet
 ```
 
 Watch / control:
 ```bash
-journalctl -u matzan -f          # live logs
-sudo systemctl restart matzan    # restart
-sudo systemctl status matzan     # health
+journalctl -u dironet -f          # live logs
+sudo systemctl restart dironet    # restart
+sudo systemctl status dironet     # health
 ```
 
 `Restart=always` keeps it alive across crashes and reboots.
@@ -231,7 +231,7 @@ python test_classifier.py  # classifier tests (46 cases)
 - [ ] `docker compose up -d --build`
 
 **Verify after deployment**
-- [ ] `docker compose ps` — both `matzan` and `caddy` are **Up**
+- [ ] `docker compose ps` — both `dironet` and `caddy` are **Up**
 - [ ] `https://your-name.duckdns.org` shows a **login box** (not an error)
 - [ ] Login with `itay` works; the browser shows a valid 🔒 (HTTPS)
 - [ ] From your **phone, on mobile data** (not home wifi) — the site loads + logs in

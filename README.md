@@ -1,4 +1,4 @@
-# 🏠 מצאן — Apartment-Hunting Agent for Beer Sheva
+# 🏠 דירונט — Apartment-Hunting Agent for Beer Sheva
 
 An always-on agent that monitors apartment sources (Yad2, Homely, Facebook groups), filters out the noise with a deterministic classifier, and pushes **only relevant matches** to Telegram in real time — with a polished web dashboard for triage.
 

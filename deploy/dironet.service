@@ -1,0 +1,27 @@
+# systemd unit for running דירונט 24/7 on a Linux VPS (no Docker).
+#
+# Install:
+#   sudo cp deploy/dironet.service /etc/systemd/system/dironet.service
+#   (edit User= and WorkingDirectory= below to match your server)
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dironet
+#
+# Watch logs:   journalctl -u dironet -f
+# Restart:      sudo systemctl restart dironet
+
+[Unit]
+Description=DiroNet apartment hunter (dashboard + bot + scanners)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dironet
+WorkingDirectory=/home/dironet/AGENTS
+Environment=TZ=Asia/Jerusalem
+ExecStart=/home/dironet/AGENTS/.venv/bin/python run_all.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

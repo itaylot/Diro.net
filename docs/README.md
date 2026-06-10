@@ -1,4 +1,4 @@
-# 📚 מצאן — Documentation Index
+# 📚 דירונט — Documentation Index
 
 Start here. The docs are split by purpose:
 

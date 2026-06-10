@@ -1,4 +1,4 @@
-# 🎤 Interview Guide — Talking About מצאן
+# 🎤 Interview Guide — Talking About דירונט
 
 > Goal: by the end you can say, truthfully, *"I built this system, I understand how it works, and I can explain the major engineering decisions behind it."*
 
@@ -8,7 +8,7 @@ This guide gives you the pitch, the story, the likely questions, and — importa
 
 ## 1. The 30-second pitch
 
-> *"מצאן is an apartment-hunting agent I built for my own move. It monitors Yad2 and Facebook groups, classifies each listing with a rule-based engine to filter out spam, roommates, and sales, and pushes only relevant matches to Telegram in real time — with a web dashboard for triage. It's deployed 24/7 in Docker. I built it to be simple enough that one person can own and explain every part."*
+> *"דירונט is an apartment-hunting agent I built for my own move. It monitors Yad2 and Facebook groups, classifies each listing with a rule-based engine to filter out spam, roommates, and sales, and pushes only relevant matches to Telegram in real time — with a web dashboard for triage. It's deployed 24/7 in Docker. I built it to be simple enough that one person can own and explain every part."*
 
 ## 2. The 2-minute version (STAR)
 
