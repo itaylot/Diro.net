@@ -54,7 +54,7 @@ Copy `.env.example` → `.env` and fill in:
 
 ```ini
 TELEGRAM_TOKEN=123456:ABC...      # from @BotFather
-TELEGRAM_CHAT_ID=6300931023       # the bot tells you on /start
+TELEGRAM_CHAT_ID=123456789       # the bot tells you on /start
 PORT=5050
 ```
 
@@ -116,7 +116,7 @@ nano .env
 Fill in:
 ```ini
 TELEGRAM_TOKEN=123456:ABC...          # from @BotFather
-TELEGRAM_CHAT_ID=6300931023           # the bot tells you on /start
+TELEGRAM_CHAT_ID=123456789           # the bot tells you on /start
 SITE_ADDRESS=diro.duckdns.org         # your DuckDNS domain
 ITAY_HASH=                            # fill in step 7
 NETA_HASH=                            # fill in step 7
