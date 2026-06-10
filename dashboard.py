@@ -141,7 +141,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>מצאן — שכונה ב׳</title>
+<title>דירונט — שכונה ב׳</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
@@ -461,7 +461,7 @@ body{
   <div class="hdr-in">
     <div class="logo" onclick="showView('listings')">
       <div class="logo-mark">🏠</div>
-      <div><div class="logo-name">מצאן</div><div class="logo-tagline">מוצא את הדירה שלך</div></div>
+      <div><div class="logo-name">דירונט</div><div class="logo-tagline">מוצא את הדירה שלך</div></div>
     </div>
     <div class="hdr-nav">
       <button class="nav-tab on" id="nb-listings" onclick="showView('listings')">דירות</button>
@@ -665,7 +665,7 @@ LOGIN_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>מצאן — כניסה</title>
+<title>דירונט — כניסה</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -693,7 +693,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;direction:rtl;min-heig
 <form class="box" id="f" onsubmit="return doLogin(event)">
   <div class="box-head">
     <div class="logo-mark">🏠</div>
-    <h1>מצאן</h1>
+    <h1>דירונט</h1>
     <p>הכניסה לאזור האישי</p>
   </div>
   <div class="box-body">
@@ -920,6 +920,6 @@ if __name__=="__main__":
         pass
     port=int(os.getenv("PORT","5050"))
     ip=get_ip()
-    print(f"\n  מצאן  →  http://localhost:{port}   |   רשת: http://{ip}:{port}\n")
+    print(f"\n  דירונט  →  http://localhost:{port}   |   רשת: http://{ip}:{port}\n")
     app.run(host="0.0.0.0",port=port,debug=False)
 
