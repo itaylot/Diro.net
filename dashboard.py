@@ -444,6 +444,15 @@ body{
 .trk-act.del:hover{background:#fef2f2;border-color:#fecaca;color:#dc2626}
 .btn-track{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e8e5e0;border-radius:11px;cursor:pointer;font-size:15px;line-height:1;padding:0;transition:all .15s}
 .btn-track:hover{background:#f5f3ff;border-color:#ddd6fe}
+/* read-only status badge on tracking cards */
+.trk-badge{font-size:11px;font-weight:700;padding:5px 12px;border-radius:100px;white-space:nowrap;flex-shrink:0}
+.tb-to_contact{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.tb-scheduled{background:#faf5ff;color:#9333ea;border:1px solid #e9d5ff}
+.tb-visited{background:#fffbeb;color:#b45309;border:1px solid #fde68a}
+.tb-candidate{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.tb-rejected{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.trk-notes{font-size:13px;color:#555;line-height:1.65;background:#fafaf8;border:1px solid #f0ede8;border-radius:10px;padding:11px 13px;white-space:pre-wrap}
+.trk-act.edit:hover{background:#f5f3ff;border-color:#ddd6fe;color:#7c3aed}
 
 @media(max-width:640px){
   .hdr{padding:0 18px;height:58px}
@@ -564,6 +573,7 @@ body{
       <div class="mf"><label>קישור למודעה (אופציונלי)</label><input id="a-url" placeholder="https://..." dir="ltr"></div>
       <div class="mf trk-only" style="display:none"><label>סטטוס</label><select id="a-status"></select></div>
       <div class="mf trk-only" style="display:none"><label>מתי מראים את הבית</label><input id="a-viewing" placeholder="לדוגמה: ראשון 18:00"></div>
+      <div class="mf trk-only" style="display:none"><label>דירוג</label><div class="stars" id="a-stars"></div></div>
       <div class="mf"><label>הערות / מה חשבנו</label><textarea id="a-notes" placeholder="התרשמות, יתרונות, חסרונות, שאלות לבעל הבית..."></textarea></div>
       <button class="s-btn" id="a-save" onclick="submitAdd()">שמור</button>
     </div>
@@ -599,24 +609,28 @@ function renderFavorites(){const g=document.getElementById('fav-grid');const lis
 // ── Add apartment (manual) + tracking board ──
 const TRK_ST={to_contact:'ליצור קשר',scheduled:'נקבעה צפייה',visited:'ראינו',candidate:'מועמדת מובילה',rejected:'נפסל'};
 const val=id=>document.getElementById(id).value.trim();
-let addMode='listing';
-function clearAddForm(){['a-addr','a-price','a-rooms','a-contact','a-url','a-viewing','a-notes'].forEach(id=>document.getElementById(id).value='')}
-function openAdd(){addMode='listing';document.getElementById('add-title').textContent='➕ הוסף דירה שמצאתם';document.querySelectorAll('.trk-only').forEach(e=>e.style.display='none');clearAddForm();document.getElementById('add-ov').classList.add('open')}
-function openTrackAdd(){addMode='tracking';document.getElementById('add-title').textContent='➕ הוסף דירה למעקב';document.getElementById('a-status').innerHTML=Object.entries(TRK_ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');document.querySelectorAll('.trk-only').forEach(e=>e.style.display='');clearAddForm();document.getElementById('add-ov').classList.add('open')}
+let addMode='listing',addRating=0,editId=null;
+function clearAddForm(){['a-addr','a-price','a-rooms','a-contact','a-url','a-viewing','a-notes'].forEach(id=>document.getElementById(id).value='');addRating=0}
+function fillStatus(v){document.getElementById('a-status').innerHTML=Object.entries(TRK_ST).map(([k,l])=>`<option value="${k}"${k===v?' selected':''}>${l}</option>`).join('')}
+function renderAddStars(){document.getElementById('a-stars').innerHTML=[1,2,3,4,5].map(i=>`<span class="star${i<=addRating?' on':''}" onclick="setAddRating(${i})">★</span>`).join('')}
+function setAddRating(r){addRating=(addRating===r?0:r);renderAddStars()}
+function openAdd(){addMode='listing';editId=null;document.getElementById('add-title').textContent='➕ הוסף דירה שמצאתם';document.querySelectorAll('.trk-only').forEach(e=>e.style.display='none');clearAddForm();document.getElementById('a-save').textContent='שמור';document.getElementById('add-ov').classList.add('open')}
+function openTrackAdd(){addMode='tracking';editId=null;document.getElementById('add-title').textContent='➕ הוסף דירה למעקב';clearAddForm();fillStatus('to_contact');renderAddStars();document.querySelectorAll('.trk-only').forEach(e=>e.style.display='');document.getElementById('a-save').textContent='הוסף למעקב';document.getElementById('add-ov').classList.add('open')}
+function openTrackEdit(id){const t=trk.find(x=>x.id===id);if(!t)return;addMode='edit';editId=id;document.getElementById('add-title').textContent='✏️ עריכת דירה במעקב';document.getElementById('a-addr').value=t.address||'';document.getElementById('a-price').value=t.price||'';document.getElementById('a-rooms').value=t.rooms||'';document.getElementById('a-contact').value=t.contact||'';document.getElementById('a-url').value=t.url||'';document.getElementById('a-viewing').value=t.viewing_date||'';document.getElementById('a-notes').value=t.notes||'';addRating=t.rating||0;fillStatus(t.status);renderAddStars();document.querySelectorAll('.trk-only').forEach(e=>e.style.display='');document.getElementById('a-save').textContent='שמור שינויים';document.getElementById('add-ov').classList.add('open')}
 function closeAdd(){document.getElementById('add-ov').classList.remove('open')}
 async function submitAdd(){const p={address:val('a-addr'),price:val('a-price'),rooms:val('a-rooms'),contact:val('a-contact'),url:val('a-url'),notes:val('a-notes')};const b=document.getElementById('a-save');b.disabled=true;
-  try{if(addMode==='tracking'){p.status=val('a-status');p.viewing_date=val('a-viewing');const d=await(await fetch('/api/tracking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok){closeAdd();toast('נוסף למעקב 📋');loadTracking();}else toast('שגיאה');}
-  else{if(!p.address&&!p.url){toast('צריך כתובת או קישור');b.disabled=false;return;}const d=await(await fetch('/api/add_listing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok){closeAdd();toast('הדירה נוספה ✓');await loadData();showView('listings');}else toast(d.error||'שגיאה');}}
-  finally{b.disabled=false}}
+  try{
+    if(addMode==='edit'){p.status=val('a-status');p.viewing_date=val('a-viewing');p.rating=addRating;const d=await(await fetch('/api/tracking/'+editId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok){closeAdd();toast('עודכן ✓');loadTracking();}else toast('שגיאה');}
+    else if(addMode==='tracking'){p.status=val('a-status');p.viewing_date=val('a-viewing');p.rating=addRating;const d=await(await fetch('/api/tracking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok){closeAdd();toast('נוסף למעקב 📋');loadTracking();}else toast('שגיאה');}
+    else{if(!p.address&&!p.url){toast('צריך כתובת או קישור');b.disabled=false;return;}const d=await(await fetch('/api/add_listing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok){closeAdd();toast('הדירה נוספה ✓');await loadData();showView('listings');}else toast(d.error||'שגיאה');}
+  }finally{b.disabled=false}}
 let trk=[];
 async function loadTracking(){try{trk=await(await fetch('/api/tracking')).json();renderTracking();}catch(_){}}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
-function starsHtml(id,r){let h='';for(let i=1;i<=5;i++)h+=`<span class="star${i<=r?' on':''}" onclick="setRating('${id}',${i})">★</span>`;return h}
-function trkCard(t){const phone=(t.contact||'').replace(/[^0-9+]/g,'');const callBtn=phone.length>=7?`<a class="trk-act call" href="tel:${phone}">📞 התקשר</a>`:'';const navBtn=t.address?`<a class="trk-act nav" href="https://www.google.com/maps/search/${encodeURIComponent(t.address+' באר שבע')}" target="_blank" rel="noopener">🗺 ניווט</a>`:'';const openBtn=t.url?`<a class="trk-act" href="${t.url}" target="_blank" rel="noopener">🔗 מודעה</a>`:'';const sub=[t.price?'₪'+t.price:'',t.rooms?t.rooms+' חד׳':'',t.added_by?'הוסיף: '+t.added_by:''].filter(Boolean).join(' · ');
-  return `<div class="trk-card st-${t.status}" id="t-${t.id}"><div class="trk-top"><div><div class="trk-addr">${esc(t.address)||'דירה'}</div><div class="trk-sub">${sub}</div></div><select class="trk-status-sel" onchange="setField('${t.id}','status',this.value)">${Object.entries(TRK_ST).map(([k,v])=>`<option value="${k}"${k===t.status?' selected':''}>${v}</option>`).join('')}</select></div>${t.contact?`<div class="trk-meta"><span class="trk-chip">👤 ${esc(t.contact)}</span></div>`:''}<div class="trk-field"><label>מתי מראים את הבית</label><input value="${esc(t.viewing_date)}" placeholder="לדוגמה: ראשון 18:00" onchange="setField('${t.id}','viewing_date',this.value)"></div><div class="trk-field"><label>דירוג</label><div class="stars">${starsHtml(t.id,t.rating||0)}</div></div><div class="trk-field"><label>הערות / מה חשבנו</label><textarea placeholder="התרשמות, יתרונות, חסרונות..." onchange="setField('${t.id}','notes',this.value)">${esc(t.notes)}</textarea></div><div class="trk-actions">${callBtn}${navBtn}${openBtn}<button class="trk-act del" onclick="delTrk('${t.id}')">🗑 הסר</button></div></div>`}
+function starsView(r){let h='';for(let i=1;i<=5;i++)h+=`<span class="star${i<=r?' on':''}" style="cursor:default">★</span>`;return h}
+function trkCard(t){const phone=(t.contact||'').replace(/[^0-9+]/g,'');const callBtn=phone.length>=7?`<a class="trk-act call" href="tel:${phone}">📞 התקשר</a>`:'';const navBtn=t.address?`<a class="trk-act nav" href="https://www.google.com/maps/search/${encodeURIComponent(t.address+' באר שבע')}" target="_blank" rel="noopener">🗺 ניווט</a>`:'';const openBtn=t.url?`<a class="trk-act" href="${t.url}" target="_blank" rel="noopener">🔗 מודעה</a>`:'';const sub=[t.price?'₪'+t.price:'',t.rooms?t.rooms+' חד׳':'',t.added_by?'הוסיף: '+t.added_by:''].filter(Boolean).join(' · ');const chips=[t.contact?`<span class="trk-chip">👤 ${esc(t.contact)}</span>`:'',t.viewing_date?`<span class="trk-chip">📅 ${esc(t.viewing_date)}</span>`:''].filter(Boolean).join('');
+  return `<div class="trk-card st-${t.status}" id="t-${t.id}"><div class="trk-top"><div><div class="trk-addr">${esc(t.address)||'דירה'}</div><div class="trk-sub">${sub}</div></div><span class="trk-badge tb-${t.status}">${TRK_ST[t.status]||''}</span></div>${chips?`<div class="trk-meta">${chips}</div>`:''}${t.rating?`<div class="stars">${starsView(t.rating)}</div>`:''}${t.notes?`<div class="trk-notes">${esc(t.notes)}</div>`:''}<div class="trk-actions">${callBtn}${navBtn}${openBtn}<button class="trk-act edit" onclick="openTrackEdit('${t.id}')">✏️ עריכה</button><button class="trk-act del" onclick="delTrk('${t.id}')">🗑 הסר</button></div></div>`}
 function renderTracking(){const g=document.getElementById('trk-grid');if(!trk.length){g.innerHTML=`<div class="empty"><div class="empty-visual"><div class="empty-house">📋</div><div class="empty-badge">ריק</div></div><h3>אין דירות במעקב</h3><p>לחץ "➕ הוסף למעקב", או על 📋 בכרטיס דירה כדי להעביר אותה לכאן.</p></div>`;return}g.innerHTML=trk.map(trkCard).join('')}
-async function setField(id,field,value){await fetch('/api/tracking/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});const t=trk.find(x=>x.id===id);if(t){t[field]=value;if(field==='status'){const el=document.getElementById('t-'+id);if(el)el.className='trk-card st-'+value;}}toast('נשמר ✓')}
-async function setRating(id,r){await setField(id,'rating',r);const el=document.getElementById('t-'+id);if(el)el.querySelectorAll('.star').forEach((s,i)=>s.className='star'+(i<r?' on':''))}
 async function delTrk(id){if(!confirm('להסיר את הדירה מהמעקב?'))return;await fetch('/api/tracking/'+id,{method:'DELETE'});trk=trk.filter(x=>x.id!==id);renderTracking();toast('הוסר מהמעקב')}
 async function addCardToTrack(id){const l=(all.find(x=>x.id===id)||{});const p={address:l.address||l.title||'',price:l.price||'',rooms:l.rooms||'',contact:l.contact||'',url:l.url||'',source_id:id,status:'to_contact'};const d=await(await fetch('/api/tracking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})).json();if(d.ok)toast('נוסף למעקב 📋 — ראה בטאב "מעקב"');else toast('שגיאה')}
 // ── Live agent activity widget ──
