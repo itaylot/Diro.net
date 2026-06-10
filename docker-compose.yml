@@ -1,0 +1,20 @@
+services:
+  matzan:
+    build: .
+    container_name: matzan
+    restart: unless-stopped          # survive crashes AND server reboots
+    env_file: .env
+    ports:
+      - "5050:5050"
+    volumes:
+      # Persist data + Facebook login + logs across container restarts
+      - ./all_listings.json:/app/all_listings.json
+      - ./seen_listings.json:/app/seen_listings.json
+      - ./seen_fb_posts.json:/app/seen_fb_posts.json
+      - ./sent_telegram.json:/app/sent_telegram.json
+      - ./dismissed.json:/app/dismissed.json
+      - ./settings.json:/app/settings.json
+      - ./tips.json:/app/tips.json
+      - ./fb_chrome_profile:/app/fb_chrome_profile
+      - ./logs:/app/logs
+    shm_size: "1gb"                  # Chromium needs shared memory

@@ -1,0 +1,17 @@
+# ─── Core ───────────────────────────────────────────────
+flask>=3.0.0
+requests>=2.31.0
+schedule>=1.2.0
+
+# ─── Scraping ───────────────────────────────────────────
+selenium>=4.20.0
+cloudscraper>=1.2.71
+
+# ─── Telegram ───────────────────────────────────────────
+python-telegram-bot>=21.0
+
+# ─── Production server (dashboard) ──────────────────────
+gunicorn>=21.2.0
+
+# ─── Config / secrets ───────────────────────────────────
+python-dotenv>=1.0.0

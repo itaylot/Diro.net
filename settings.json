@@ -1,0 +1,45 @@
+{
+  "enabled": true,
+  "expiry_date": "2026-06-23",
+  "run_times": [
+    "09:00"
+  ],
+  "yad2_interval_minutes": 400,
+  "fb_interval_minutes": 30,
+  "max_price": 4100,
+  "min_rooms": 1.5,
+  "max_rooms": 3.5,
+  "telegram_token": "",
+  "telegram_chat_id": "",
+  "sources": {
+    "yad2": true,
+    "homely": true,
+    "facebook": true
+  },
+  "allowed_streets": [
+    "ביאליק",
+    "שמעוני",
+    "חיים הזז",
+    "הזז",
+    "יעקב כהן",
+    "טשרניחובסקי",
+    "צ'רניחובסקי",
+    "מצדה",
+    "אבן גבירול",
+    "נסתר",
+    "למדן",
+    "חז\"ל",
+    "חזל",
+    "בן יהודה",
+    "בנימין",
+    "פישמן",
+    "ארלוזורוב",
+    "בורוכוב",
+    "ויצמן",
+    "בלפור",
+    "האחים ישראלי",
+    "ז'בוטינסקי",
+    "דיזנגוף"
+  ],
+  "facebook_groups": {}
+}

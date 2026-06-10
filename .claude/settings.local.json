@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(python -c ' *)",
+      "Bash(py --version)",
+      "PowerShell(Get-Command python3, py, python -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command conda -ErrorAction SilentlyContinue; Get-ChildItem \"C:\\\\ProgramData\\\\miniconda3\", \"C:\\\\ProgramData\\\\anaconda3\", \"$env:USERPROFILE\\\\miniconda3\", \"$env:USERPROFILE\\\\anaconda3\" -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}

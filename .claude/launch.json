@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "email-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "7788"],
+      "port": 7788
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["dashboard.py"],
+      "port": 5050
+    }
+  ]
+}

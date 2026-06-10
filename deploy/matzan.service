@@ -1,0 +1,27 @@
+# systemd unit for running מצאן 24/7 on a Linux VPS (no Docker).
+#
+# Install:
+#   sudo cp deploy/matzan.service /etc/systemd/system/matzan.service
+#   (edit User= and WorkingDirectory= below to match your server)
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now matzan
+#
+# Watch logs:   journalctl -u matzan -f
+# Restart:      sudo systemctl restart matzan
+
+[Unit]
+Description=Matzan apartment hunter (dashboard + bot + scanners)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=matzan
+WorkingDirectory=/home/matzan/AGENTS
+Environment=TZ=Asia/Jerusalem
+ExecStart=/home/matzan/AGENTS/.venv/bin/python run_all.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
