@@ -401,6 +401,17 @@ body{
 .menu-count{margin-inline-start:auto;background:#eee;color:#888;font-size:11px;font-weight:700;padding:1px 9px;border-radius:100px}
 /* tracked-state for the card "add to tracking" button */
 .btn-track.is-tracked{width:auto;padding:0 12px;gap:4px;background:#f0fdf4;border-color:#bbf7d0;color:#16a34a;font-size:12.5px;font-weight:700;cursor:default}
+/* MOBILE BOTTOM NAV (thumb-reachable primary navigation) */
+.botnav{display:none}
+@media(max-width:640px){
+  .botnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:350;background:rgba(255,255,255,.97);backdrop-filter:blur(14px) saturate(180%);border-top:1px solid #e8e2d8;padding:7px 4px calc(7px + env(safe-area-inset-bottom));box-shadow:0 -3px 18px rgba(90,60,20,.09)}
+  .botnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;font-family:inherit;font-size:10.5px;font-weight:700;color:#a99f93;padding:6px 2px;cursor:pointer;border-radius:12px;transition:color .15s,transform .12s}
+  .botnav button:active{transform:scale(.92)}
+  .botnav button.on{color:#16a34a}
+  .botnav .bn-ico{font-size:21px;line-height:1;filter:grayscale(.4)}
+  .botnav button.on .bn-ico{filter:grayscale(0)}
+  .page{padding-bottom:92px}            /* clear the bottom bar */
+}
 
 /* HEART (favorite) button */
 .btn-fav{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e8e5e0;border-radius:11px;cursor:pointer;font-size:17px;line-height:1;transition:all .15s;padding:0}
@@ -612,6 +623,12 @@ body{
     </div>
   </div>
 </div>
+<nav class="botnav" id="botnav">
+  <button id="bn-listings" class="on" onclick="showView('listings')"><span class="bn-ico">🏠</span>דירות</button>
+  <button id="bn-favorites" onclick="showView('favorites')"><span class="bn-ico">❤️</span>מועדפים</button>
+  <button id="bn-tracking" onclick="showView('tracking')"><span class="bn-ico">📋</span>מעקב</button>
+  <button id="bn-tips" onclick="showView('tips')"><span class="bn-ico">💡</span>טיפים</button>
+</nav>
 <div class="toast" id="toast"></div>
 <script>
 let all=[],dim=new Set(),curView='listings',fav=new Set(),me='',tracked=new Set();
@@ -627,7 +644,7 @@ function mLevel(sc){sc=sc||0;const pct=Math.max(40,Math.min(99,Math.round(sc/18*
 const RHE={rental_keyword:'מודעת השכרה',availability_keyword:'כניסה/זמינה',dedicated_group:'שכונה ב׳',date_found:'תאריך כניסה',suitable_for_couple:'מתאים לזוג',studio_or_unit:'יחידת דיור'};
 function whyHe(rs){if(!rs)return[];const out=[];rs.forEach(r=>{if(r.indexOf('location:')===0)out.push('מיקום: '+r.split(':')[1]);else if(RHE[r])out.push(RHE[r])});return[...new Set(out)].slice(0,4)}
 function fresh(ts){if(!ts)return null;const d=new Date(ts.replace(' ','T'));if(isNaN(d))return null;const m=(Date.now()-d)/60000;let txt;if(m<60)txt='לפני '+Math.max(0,Math.round(m))+' דק׳';else if(m<1440)txt='לפני '+Math.floor(m/60)+' שעות';else txt='לפני '+Math.floor(m/1440)+' ימים';return{txt,isNew:m<720}}
-function showView(v){curView=v;['listings','favorites','tracking','tips'].forEach(n=>document.getElementById('view-'+n).style.display=v===n?'':'none');document.getElementById('meta-bar').style.display=v==='listings'?'':'none';document.getElementById('scan-bar').className='scan-bar';['listings','favorites','tracking','tips'].forEach(n=>{const e=document.getElementById('mn-'+n);if(e)e.className='menu-item'+(n===v?' on':'')});if(v==='tips')loadTips();else if(v==='favorites')renderFavorites();else if(v==='tracking')loadTracking();else render()}
+function showView(v){curView=v;['listings','favorites','tracking','tips'].forEach(n=>document.getElementById('view-'+n).style.display=v===n?'':'none');document.getElementById('meta-bar').style.display=v==='listings'?'':'none';document.getElementById('scan-bar').className='scan-bar';['listings','favorites','tracking','tips'].forEach(n=>{const e=document.getElementById('mn-'+n);if(e)e.className='menu-item'+(n===v?' on':'');const b=document.getElementById('bn-'+n);if(b)b.className=(n===v?'on':'')});if(v==='tips')loadTips();else if(v==='favorites')renderFavorites();else if(v==='tracking')loadTracking();else render()}
 function openMenu(){document.getElementById('menu-ov').classList.add('open');document.getElementById('menu-drawer').classList.add('open')}
 function closeMenu(){document.getElementById('menu-ov').classList.remove('open');document.getElementById('menu-drawer').classList.remove('open')}
 function menuGo(v){closeMenu();showView(v)}
