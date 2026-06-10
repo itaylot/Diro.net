@@ -4,14 +4,16 @@ Turn this from a local prototype into a 24/7 product you and your girlfriend ope
 
 ---
 
-## TL;DR — the simplest reliable path
+## TL;DR — the recommended path (public site, HTTPS, login)
 
-1. Rent a **small VPS** (~$5–6/month) or use a spare always-on machine.
-2. Copy the project, create a `.env` with your Telegram token.
-3. Run **`python run_all.py`** under **Docker** *or* **systemd** so it restarts forever.
-4. Open `http://YOUR_SERVER_IP:5050`.
+1. Create a **Hetzner CX22** server (~€4.5/mo, Ubuntu).
+2. Point a free **DuckDNS** subdomain at the server's IP.
+3. Open the firewall to **ports 22, 80, 443 only** (the dashboard's 5050 stays private).
+4. Install Docker, clone the repo, create `.env`, generate two login passwords.
+5. `docker compose up -d --build` — **Caddy** auto-gets an HTTPS certificate and puts a login in front.
+6. Open `https://your-name.duckdns.org` from any phone → login → done.
 
-That's it. Everything (dashboard + bot + both scanners + daily tips) runs from one command and self-heals.
+Everything (dashboard + bot + scanners + daily tips) runs from one command, behind HTTPS + a password, and self-heals on crash or reboot. **Full step-by-step in section 4 below.**
 
 ---
 
@@ -62,24 +64,106 @@ All search preferences (price, rooms, intervals, Facebook groups) are edited liv
 
 ---
 
-## 4A. Deploy with Docker (recommended — Chromium baked in)
+## 4. Public deployment: Hetzner + DuckDNS + Caddy (HTTPS + login)
 
-```bash
-# on the server, inside the project folder
-cp .env.example .env && nano .env        # fill in your token
+This is the full beginner walkthrough. Goal: `https://your-name.duckdns.org`, reachable from any phone, protected by a username + password. Expect ~30–45 minutes the first time.
 
-docker compose up -d --build             # build + run in background
-docker compose logs -f                   # watch it start
+**How the pieces fit:** the internet only ever talks to **Caddy** (ports 80/443). Caddy checks your password, gets a free HTTPS certificate, and forwards you to the **dashboard**, which is *not* reachable from the internet directly. The Telegram bot and scanners run alongside, no public port needed.
+
+```
+phone ──HTTPS+login──► Caddy ──private──► dashboard (:5050) + bot + scanners
 ```
 
-- `restart: unless-stopped` survives crashes **and server reboots**.
-- Your data files + Facebook login (`fb_chrome_profile/`) are mounted as volumes, so they persist across rebuilds.
-- Update after code changes: `docker compose up -d --build`.
+### Step 1 — Create the server (Easy)
+1. Sign up at [hetzner.com/cloud](https://www.hetzner.com/cloud) → **New Project** → **Add Server**.
+2. Choose: **Ubuntu 24.04**, type **CX22** (2 vCPU / 4 GB — enough for Chromium), a datacenter near you (Nuremberg/Falkenstein).
+3. Under **SSH keys**, add your public key (recommended) — or you'll get a root password by email.
+4. Create the server and note its **public IPv4** (e.g. `91.99.12.34`).
 
-**First-time Facebook login** (needed once, to seed `fb_chrome_profile/`):
-run `python facebook_agent.py --login` on a machine with a screen, then copy the `fb_chrome_profile/` folder to the server. (Headless servers can't show the login window.)
+### Step 2 — Free domain with DuckDNS (Easy)
+1. Go to [duckdns.org](https://www.duckdns.org), sign in (Google/GitHub).
+2. Pick a subdomain, e.g. `diro` → you get **`diro.duckdns.org`**.
+3. In the **current ip** box, paste your server's IPv4 and click **update ip**.
+4. (Check it: `ping diro.duckdns.org` should show your server IP.)
 
-## 4B. Deploy with systemd (no Docker)
+> Why a domain at all? HTTPS certificates can't be issued for a bare IP — you need a name. DuckDNS gives you one for free.
+
+### Step 3 — Open only the right ports (Easy)
+In the Hetzner console → your server → **Firewall** → create a firewall that **allows inbound only**:
+- **22** (SSH), **80** (HTTP), **443** (HTTPS).
+
+Everything else (including the dashboard's 5050) stays blocked from the internet. The dashboard is reachable *only* through Caddy.
+
+### Step 4 — Connect and install Docker (Easy)
+```bash
+ssh root@YOUR_SERVER_IP
+
+# install Docker + compose
+curl -fsSL https://get.docker.com | sh
+```
+
+### Step 5 — Get the code (Easy)
+```bash
+git clone https://github.com/itaylot/Diro.net.git AGENTS
+cd AGENTS
+```
+
+### Step 6 — Create your secrets file `.env` (Medium)
+```bash
+cp .env.example .env
+nano .env
+```
+Fill in:
+```ini
+TELEGRAM_TOKEN=123456:ABC...          # from @BotFather
+TELEGRAM_CHAT_ID=6300931023           # the bot tells you on /start
+SITE_ADDRESS=diro.duckdns.org         # your DuckDNS domain
+ITAY_HASH=                            # fill in step 7
+NETA_HASH=                            # fill in step 7
+```
+
+### Step 7 — Generate the two login passwords (Medium)
+Run this **on the server**, once per user, and paste each result into `.env`:
+```bash
+docker run --rm caddy caddy hash-password --plaintext 'itays-password-here'
+docker run --rm caddy caddy hash-password --plaintext 'netas-password-here'
+```
+Each prints a bcrypt hash like `$2a$14$Xy...`. Put them in `.env`:
+```ini
+ITAY_HASH=$2a$14$....the itay hash....
+NETA_HASH=$2a$14$....the neta hash....
+```
+> **Where do the real passwords live?** Only in `.env` on the server. `.env` is git-ignored, so it never goes to GitHub. The committed `Caddyfile` only references `{$ITAY_HASH}` — no real hash is ever in version control. Don't wrap the hashes in quotes.
+
+### Step 8 — Seed the Facebook login (Medium — the fiddly part)
+The server has no screen, so log in to Facebook on your **laptop** first:
+```bash
+# on your laptop, in the project folder:
+python facebook_agent.py --login      # a Chrome window opens — log in, then close it
+```
+Then copy the saved session up to the server:
+```bash
+scp -r fb_chrome_profile root@YOUR_SERVER_IP:/root/AGENTS/
+```
+
+### Step 9 — Launch everything (Easy)
+```bash
+docker compose up -d --build
+docker compose logs -f                 # watch it boot; Ctrl+C to stop watching
+```
+Caddy will fetch an HTTPS certificate automatically (takes ~30 seconds the first time).
+
+### Step 10 — Open it 🎉
+Visit **`https://diro.duckdns.org`** from any device → you'll get a login box → enter `itay` / your password. The padlock 🔒 means HTTPS is working.
+
+**Updating later** (after you push code changes):
+```bash
+cd ~/AGENTS && git pull && docker compose up -d --build
+```
+
+## 4-ALT. Deploy with systemd (no Docker, no HTTPS/login)
+
+> Use this only if you don't want Docker. Note: it does **not** include Caddy, so you get no HTTPS or login — keep it on a private network if you use this path. The Docker path above is recommended.
 
 ```bash
 # install Chrome/Chromium + Python deps
@@ -116,14 +200,14 @@ python test_classifier.py  # classifier tests (46 cases)
 
 ---
 
-## 6. Security basics
+## 6. Security basics (how this setup protects you)
 
-- ✅ Secrets in `.env` (git-ignored), not in code.
-- ✅ `fb_chrome_profile/` is git-ignored (it contains your Facebook session).
-- 🔒 **Don't expose port 5050 to the open internet unprotected.** Options:
-  - Easiest: access over your home network / a VPN (Tailscale is free and 2-minute setup).
-  - Or put **Caddy/Nginx** in front with HTTP basic-auth + HTTPS (Caddy gives auto-HTTPS in ~5 lines).
-- 🔒 The dashboard has no auth by design (personal tool). Treat its URL as private.
+- ✅ **Login on every visit** — Caddy Basic Auth (`itay` / `neta`), passwords stored only as bcrypt hashes in `.env` on the server.
+- ✅ **HTTPS everywhere** — Caddy auto-issues and renews a Let's Encrypt certificate; the login is never sent in plaintext.
+- ✅ **Dashboard is private** — port 5050 is `expose`d (container-internal) but **never published** to the host, and the firewall blocks everything except 22/80/443. The only way in is through Caddy's login.
+- ✅ **Secrets never in git** — `.env`, `fb_chrome_profile/`, and password hashes are all git-ignored. The committed `Caddyfile` only references `{$ITAY_HASH}` etc.
+- 🔒 **Harden SSH** (recommended): use a key (not a password) and disable root password login (`PasswordAuthentication no` in `/etc/ssh/sshd_config`).
+- 🔁 **Rotate a password** anytime: regenerate a hash (step 7), update `.env`, then `docker compose up -d` to reload.
 
 ---
 
@@ -135,17 +219,28 @@ python test_classifier.py  # classifier tests (46 cases)
 
 ---
 
-## 8. Deployment checklist
+## 8. Deployment checklist & verification
 
-- [ ] Server with ≥2 GB RAM, timezone `Asia/Jerusalem`
-- [ ] `.env` created with `TELEGRAM_TOKEN` + `TELEGRAM_CHAT_ID`
-- [ ] `fb_chrome_profile/` seeded via `--login` and copied to server
-- [ ] `docker compose up -d --build` **or** systemd service enabled
-- [ ] Open `http://SERVER:5050` — dashboard loads, cards show
-- [ ] Send `/start` to the bot — it replies
-- [ ] Trigger a scan (dashboard refresh button or `/סרוק`) — a Telegram alert arrives
-- [ ] Restart the server — confirm everything comes back automatically
-- [ ] (Recommended) Put Tailscale or Caddy+auth in front before sharing the URL
+**Setup**
+- [ ] Hetzner CX22 (≥2 GB RAM), Ubuntu 24.04
+- [ ] DuckDNS subdomain pointing at the server IP (`ping` confirms)
+- [ ] Firewall allows **only** 22 / 80 / 443
+- [ ] Docker installed, repo cloned
+- [ ] `.env` filled: `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`, `SITE_ADDRESS`, `ITAY_HASH`, `NETA_HASH`
+- [ ] `fb_chrome_profile/` seeded via `--login` and `scp`'d to the server
+- [ ] `docker compose up -d --build`
+
+**Verify after deployment**
+- [ ] `docker compose ps` — both `matzan` and `caddy` are **Up**
+- [ ] `https://your-name.duckdns.org` shows a **login box** (not an error)
+- [ ] Login with `itay` works; the browser shows a valid 🔒 (HTTPS)
+- [ ] From your **phone, on mobile data** (not home wifi) — the site loads + logs in
+- [ ] `curl http://YOUR_SERVER_IP:5050` from your laptop **fails/times out** (proves 5050 is private)
+- [ ] Dashboard cards load; the live agent-status strip shows the scanners
+- [ ] Send `/start` to the Telegram bot — it replies
+- [ ] Trigger a scan (refresh button or `/סרוק`) — a Telegram alert arrives
+- [ ] `sudo reboot` the server — after ~1 min, the site comes back on its own
+- [ ] `docker compose logs caddy` shows a certificate was obtained (no TLS errors)
 
 ---
 

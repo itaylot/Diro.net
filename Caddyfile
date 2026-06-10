@@ -1,0 +1,27 @@
+# מצאן — Caddy reverse-proxy config (committed template — NO real secrets here).
+#
+# Caddy gives you, for free:
+#   • Automatic HTTPS (Let's Encrypt certificate, auto-renewed)
+#   • A login/password gate (HTTP Basic Auth)
+#   • A private door to the dashboard (only Caddy can reach port 5050)
+#
+# All real values come from environment variables, set in .env ON THE SERVER
+# (which is git-ignored — so no domain or password hash is ever committed):
+#
+#   SITE_ADDRESS   your domain, e.g.  diro.duckdns.org
+#   ITAY_HASH      bcrypt hash for user "itay"
+#   NETA_HASH      bcrypt hash for user "neta"
+#
+# Generate a password hash on the server (you'll paste the output into .env):
+#   docker run --rm caddy caddy hash-password --plaintext 'your-password-here'
+
+{$SITE_ADDRESS} {
+    # Login gate — usernames are fixed; passwords live as bcrypt hashes in .env
+    basic_auth {
+        itay {$ITAY_HASH}
+        neta {$NETA_HASH}
+    }
+
+    # Forward authenticated traffic to the private dashboard container
+    reverse_proxy matzan:5050
+}

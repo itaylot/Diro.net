@@ -1,6 +1,11 @@
 # Secrets
 .env
 
+# AI tooling — Claude Code config/commands, not part of the product
+.claude/
+CLAUDE.md
+docs/SESSION_LOG.md
+
 # Chrome profile (contains your Facebook login — never commit)
 fb_chrome_profile/
 

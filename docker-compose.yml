@@ -1,11 +1,12 @@
 services:
+  # ── The app: dashboard + bot + scanners (run by run_all.py) ──
   matzan:
     build: .
     container_name: matzan
     restart: unless-stopped          # survive crashes AND server reboots
     env_file: .env
-    ports:
-      - "5050:5050"
+    expose:
+      - "5050"                        # INTERNAL only — reachable by caddy, NOT published to the host
     volumes:
       # Persist data + Facebook login + logs across container restarts
       - ./all_listings.json:/app/all_listings.json
@@ -17,4 +18,24 @@ services:
       - ./tips.json:/app/tips.json
       - ./fb_chrome_profile:/app/fb_chrome_profile
       - ./logs:/app/logs
-    shm_size: "1gb"                  # Chromium needs shared memory
+    shm_size: "1gb"                   # Chromium needs shared memory
+
+  # ── Caddy: public HTTPS + login in front of the private dashboard ──
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    env_file: .env                    # supplies SITE_ADDRESS, ITAY_HASH, NETA_HASH
+    ports:
+      - "80:80"                       # HTTP — used for the Let's Encrypt challenge + redirect to HTTPS
+      - "443:443"                     # HTTPS — the only public way in
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data              # stores TLS certificates — MUST persist
+      - caddy_config:/config
+    depends_on:
+      - matzan
+
+volumes:
+  caddy_data:
+  caddy_config:
