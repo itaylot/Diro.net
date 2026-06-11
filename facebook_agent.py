@@ -548,6 +548,28 @@ def save_to_all_listings(listings: list[dict]):
         encoding="utf-8",
     )
 
+
+def push_to_server(listings: list[dict]):
+    """
+    Push found listings to the cloud dashboard (so it shows them even though the
+    Facebook agent runs here on the home PC). No-op unless INGEST_URL +
+    INGEST_TOKEN are set in .env. Token-authenticated.
+    """
+    import os
+    url = os.getenv("INGEST_URL")
+    token = os.getenv("INGEST_TOKEN")
+    if not url or not token or not listings:
+        return
+    try:
+        import requests
+        r = requests.post(url, json=listings,
+                          headers={"X-Ingest-Token": token}, timeout=25)
+        data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        print(f"  [שרת] נשלחו {len(listings)} דירות → {r.status_code} "
+              f"(חדשות: {data.get('added', '?')})")
+    except Exception as e:
+        print(f"  [שרת] שגיאה בשליחה: {e}")
+
 # ─── Chrome driver ────────────────────────────────────────────────────────────
 
 def make_driver(headless: bool = True) -> webdriver.Chrome:
@@ -1129,6 +1151,7 @@ def run_once(driver: webdriver.Chrome):
 
     if all_found:
         save_to_all_listings(all_found)
+        push_to_server(all_found)
 
     if telegram_posts:
         import asyncio

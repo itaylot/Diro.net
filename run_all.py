@@ -120,8 +120,15 @@ def main():
     print(f"  לוגים: {LOGS}")
     print("=" * 60)
 
+    services = dict(SERVICES)
+    # On the cloud server, Facebook is blocked (datacenter IP) — it runs on the
+    # user's home PC instead and pushes via /api/ingest. Set DISABLE_FACEBOOK=1.
+    if os.getenv("DISABLE_FACEBOOK") == "1":
+        services.pop("facebook", None)
+        _log("supervisor", "facebook disabled (DISABLE_FACEBOOK=1) — runs on the home PC")
+
     threads = []
-    for name, cmd in SERVICES.items():
+    for name, cmd in services.items():
         t = threading.Thread(target=supervise, args=(name, cmd), daemon=True)
         t.start()
         threads.append(t)

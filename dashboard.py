@@ -794,7 +794,9 @@ async function doLogin(e){
 
 @app.before_request
 def _require_login():
-    if request.path == "/login" or request.path.startswith("/static"):
+    # /login and /api/ingest are exempt: ingest uses a token header, not a session
+    # (it's how the home Facebook agent pushes listings to the server).
+    if request.path in ("/login", "/api/ingest") or request.path.startswith("/static"):
         return
     if not session.get("user"):
         if request.path.startswith("/api/"):
@@ -831,6 +833,32 @@ def api_favorites():
 def api_favorite(lid):
     now_fav = app_auth.toggle_favorite(session["user"], lid)
     return jsonify({"favorited": now_fav})
+
+
+# ─── Ingest from the home Facebook agent (token-authenticated) ────────────────
+
+@app.route("/api/ingest", methods=["POST"])
+def api_ingest():
+    import os
+    token = os.getenv("INGEST_TOKEN", "")
+    if not token or request.headers.get("X-Ingest-Token") != token:
+        return jsonify({"error": "unauthorized"}), 401
+    items = request.get_json(silent=True) or []
+    if not isinstance(items, list):
+        return jsonify({"error": "expected a list"}), 400
+    existing = {x["id"]: x for x in load_listings() if isinstance(x, dict) and "id" in x}
+    added = 0
+    for it in items:
+        if not isinstance(it, dict) or "id" not in it:
+            continue
+        if it["id"] not in existing:
+            added += 1
+        existing[it["id"]] = it
+    LISTINGS_FILE.write_text(
+        json.dumps(list(reversed(list(existing.values()))), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return jsonify({"ok": True, "received": len(items), "added": added})
 
 
 # ─── Manually-added listings ("apartments we found ourselves") ────────────────
