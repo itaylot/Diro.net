@@ -22,6 +22,7 @@ from telegram import (
 )
 from telegram.ext import (
     Application, CallbackQueryHandler, CommandHandler, ContextTypes,
+    MessageHandler, filters,
 )
 from telegram.error import TelegramError
 from telegram.constants import ParseMode
@@ -429,12 +430,14 @@ def main():
 
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start",  cmd_start))
-    app.add_handler(CommandHandler("סרוק",   cmd_scan))
-    app.add_handler(CommandHandler("scan",   cmd_scan))   # English alias
+    app.add_handler(CommandHandler("scan",   cmd_scan))   # /scan
     app.add_handler(CommandHandler("list",   cmd_list))
     app.add_handler(CommandHandler("stop",   cmd_stop))
     app.add_handler(CommandHandler("resume", cmd_resume))
     app.add_handler(CommandHandler("status", cmd_status))
+    # Telegram only allows ASCII command names, so /סרוק can't be a CommandHandler.
+    # Catch it (and a few Hebrew words) as plain text instead.
+    app.add_handler(MessageHandler(filters.Regex(r"^/?(סרוק|חפש|חיפוש)\s*$"), cmd_scan))
     app.add_handler(CallbackQueryHandler(on_callback))
 
     app.run_polling(drop_pending_updates=True)
