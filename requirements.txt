@@ -15,3 +15,6 @@ gunicorn>=21.2.0
 
 # ─── Config / secrets ───────────────────────────────────
 python-dotenv>=1.0.0
+
+# ─── Safe storage (atomic writes + cross-process file locks) ─
+filelock>=3.12.0

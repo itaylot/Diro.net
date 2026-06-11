@@ -16,6 +16,10 @@ tracking.json
 logs/
 *.log
 
+# Storage runtime artifacts (file locks + atomic-write temp files)
+*.lock
+*.tmp
+
 # Python
 __pycache__/
 *.pyc
