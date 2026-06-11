@@ -8,6 +8,9 @@ docs/SESSION_LOG.md
 
 # Chrome profile (contains your Facebook login — never commit)
 fb_chrome_profile/
+fb_profile.zip
+*.zip
+tracking.json
 
 # Logs
 logs/

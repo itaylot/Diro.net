@@ -510,17 +510,6 @@ def classify_post(
     else:
         return "irrelevant", score, rooms, price, reasons
 
-# ─── Backwards-compat shim (used nowhere else, but kept for clarity) ──────────
-
-def mentions_hood(text: str) -> bool:
-    return _contains(text, LOCATION_BS)
-
-def mentions_street(text: str) -> bool:
-    streets = cfg().get("allowed_streets", [])
-    if not streets:
-        return True
-    return _contains(text, streets)
-
 # ─── Persistence ─────────────────────────────────────────────────────────────
 
 def load_seen() -> set:

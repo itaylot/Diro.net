@@ -1005,7 +1005,7 @@ def api_sg():
 def get_ip():
     try:
         s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.connect(("8.8.8.8",80)); ip=s.getsockname()[0]; s.close(); return ip
-    except: return "localhost"
+    except Exception: return "localhost"
 
 if __name__=="__main__":
     import os
