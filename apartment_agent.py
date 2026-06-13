@@ -19,6 +19,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from email_template import build_email_html
 
+import storage
+
 # ─── Configuration (overridden by settings.json at runtime) ──────────────────
 EMAIL_RECIPIENT = "itayl1998@gmail.com"
 EMAIL_SENDER    = ""
@@ -30,11 +32,9 @@ DISMISSED_FILE = Path(__file__).parent / "dismissed.json"
 SENT_FILE      = Path(__file__).parent / "sent_telegram.json"
 
 def load_settings() -> dict:
-    if SETTINGS_FILE.exists():
-        with open(SETTINGS_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    return {"enabled": True, "max_price": 3500, "min_rooms": 2, "max_rooms": 3,
-            "run_times": ["10:00", "20:00"], "sources": {"yad2": True}}
+    return storage.read_json(SETTINGS_FILE, {
+        "enabled": True, "max_price": 3500, "min_rooms": 2, "max_rooms": 3,
+        "run_times": ["10:00", "20:00"], "sources": {"yad2": True}})
 
 SEEN_FILE = Path(__file__).parent / "seen_listings.json"
 
@@ -103,36 +103,28 @@ def get_page_html(driver: webdriver.Chrome, url: str, wait: float = 4.0) -> str:
 # ─── Seen listings persistence ───────────────────────────────────────────────
 
 def load_seen() -> set:
-    if SEEN_FILE.exists():
-        with open(SEEN_FILE, encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
+    return set(storage.read_json(SEEN_FILE, []))
 
 
 def save_seen(seen: set):
-    with open(SEEN_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(seen), f)
+    storage.write_json(SEEN_FILE, list(seen))
 
 
 def load_dismissed() -> set:
-    if DISMISSED_FILE.exists():
-        with open(DISMISSED_FILE, encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
+    return set(storage.read_json(DISMISSED_FILE, []))
 
 
 def save_all_listings(listings: list[dict]):
     """Merge new listings into the master list shown by the dashboard."""
-    existing = {}
-    if ALL_FILE.exists():
-        with open(ALL_FILE, encoding="utf-8") as f:
-            for item in json.load(f):
-                existing[item["id"]] = item
-    for lst in listings:
-        existing[lst["id"]] = lst
-    with open(ALL_FILE, "w", encoding="utf-8") as f:
+    def _mut(existing_list):
+        existing = {}
+        for item in (existing_list or []):
+            existing[item["id"]] = item
+        for lst in listings:
+            existing[lst["id"]] = lst
         # newest first
-        json.dump(list(reversed(list(existing.values()))), f, ensure_ascii=False, indent=2)
+        return list(reversed(list(existing.values())))
+    storage.update_json(ALL_FILE, _mut, [])
 
 
 # ─── Yad2 ────────────────────────────────────────────────────────────────────

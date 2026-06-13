@@ -20,6 +20,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
+import storage
+
 # Force UTF-8 output so Hebrew prints never crash on Windows (cp1252 console/file).
 # Without this, printing a Hebrew post title raises UnicodeEncodeError and can
 # abort the scan loop mid-way, silently dropping posts.
@@ -513,29 +515,23 @@ def classify_post(
 # ─── Persistence ─────────────────────────────────────────────────────────────
 
 def load_seen() -> set:
-    if SEEN_FB_F.exists():
-        return set(json.loads(SEEN_FB_F.read_text(encoding="utf-8")))
-    return set()
+    return set(storage.read_json(SEEN_FB_F, []))
 
 def save_seen(seen: set):
-    SEEN_FB_F.write_text(json.dumps(list(seen)), encoding="utf-8")
+    storage.write_json(SEEN_FB_F, list(seen))
 
 def load_dismissed() -> set:
-    if DISMISSED_F.exists():
-        return set(json.loads(DISMISSED_F.read_text(encoding="utf-8")))
-    return set()
+    return set(storage.read_json(DISMISSED_F, []))
 
 def save_to_all_listings(listings: list[dict]):
-    existing = {}
-    if ALL_F.exists():
-        for item in json.loads(ALL_F.read_text(encoding="utf-8")):
+    def _mut(existing_list):
+        existing = {}
+        for item in (existing_list or []):
             existing[item["id"]] = item
-    for lst in listings:
-        existing[lst["id"]] = lst
-    ALL_F.write_text(
-        json.dumps(list(reversed(list(existing.values()))), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+        for lst in listings:
+            existing[lst["id"]] = lst
+        return list(reversed(list(existing.values())))
+    storage.update_json(ALL_F, _mut, [])
 
 
 def push_to_server(listings: list[dict]):

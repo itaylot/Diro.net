@@ -25,6 +25,8 @@ from pathlib import Path
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
+import storage
+
 ROOT = Path(__file__).parent
 USERS_F = ROOT / "users.json"
 FAVS_F = ROOT / "favorites.json"
@@ -51,22 +53,20 @@ def get_secret_key() -> str:
 # ─── Users ────────────────────────────────────────────────────────────────────
 
 def load_users() -> dict:
-    if USERS_F.exists():
-        try:
-            return json.loads(USERS_F.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
+    return storage.read_json(USERS_F, {})
 
 
 def save_users(u: dict):
-    USERS_F.write_text(json.dumps(u, ensure_ascii=False, indent=2), encoding="utf-8")
+    storage.write_json(USERS_F, u)
 
 
 def set_password(username: str, password: str):
-    u = load_users()
-    u[username] = {"password_hash": generate_password_hash(password)}
-    save_users(u)
+    h = generate_password_hash(password)
+    def _mut(u):
+        u = u or {}
+        u[username] = {"password_hash": h}
+        return u
+    storage.update_json(USERS_F, _mut, {})
 
 
 def check_login(username: str, password: str) -> bool:
@@ -79,16 +79,11 @@ def check_login(username: str, password: str) -> bool:
 # ─── Favorites (per user) ─────────────────────────────────────────────────────
 
 def load_favorites() -> dict:
-    if FAVS_F.exists():
-        try:
-            return json.loads(FAVS_F.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
+    return storage.read_json(FAVS_F, {})
 
 
 def save_favorites(f: dict):
-    FAVS_F.write_text(json.dumps(f, ensure_ascii=False, indent=2), encoding="utf-8")
+    storage.write_json(FAVS_F, f)
 
 
 def get_user_favorites(username: str) -> list:
@@ -97,17 +92,20 @@ def get_user_favorites(username: str) -> list:
 
 def toggle_favorite(username: str, listing_id: str) -> bool:
     """Add/remove a listing from the user's favorites. Returns True if now favorited."""
-    favs = load_favorites()
-    ids = favs.get(username, [])
-    if listing_id in ids:
-        ids.remove(listing_id)
-        now_fav = False
-    else:
-        ids.append(listing_id)
-        now_fav = True
-    favs[username] = ids
-    save_favorites(favs)
-    return now_fav
+    state = {}
+    def _mut(favs):
+        favs = favs or {}
+        ids = favs.get(username, [])
+        if listing_id in ids:
+            ids.remove(listing_id)
+            state["fav"] = False
+        else:
+            ids.append(listing_id)
+            state["fav"] = True
+        favs[username] = ids
+        return favs
+    storage.update_json(FAVS_F, _mut, {})
+    return state["fav"]
 
 
 # ─── Route protection ─────────────────────────────────────────────────────────

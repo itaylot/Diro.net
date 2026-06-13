@@ -7,6 +7,7 @@ Open: http://localhost:5050
 import app_env  # noqa: F401 — forces UTF-8 stdout + loads .env (must be first)
 import app_auth
 import app_tracking
+import storage
 import json, re, socket, threading, time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -22,25 +23,25 @@ SETTINGS_FILE  = Path(__file__).parent / "settings.json"
 TIPS_FILE      = Path(__file__).parent / "tips.json"
 
 def load_listings():
-    return json.loads(LISTINGS_FILE.read_text(encoding="utf-8")) if LISTINGS_FILE.exists() else []
+    return storage.read_json(LISTINGS_FILE, [])
 def load_dismissed():
-    return set(json.loads(DISMISSED_FILE.read_text(encoding="utf-8"))) if DISMISSED_FILE.exists() else set()
+    return set(storage.read_json(DISMISSED_FILE, []))
 def save_dismissed(d):
-    DISMISSED_FILE.write_text(json.dumps(list(d)), encoding="utf-8")
+    storage.write_json(DISMISSED_FILE, list(d))
 def load_settings():
-    return json.loads(SETTINGS_FILE.read_text(encoding="utf-8")) if SETTINGS_FILE.exists() else {}
+    return storage.read_json(SETTINGS_FILE, {})
 def save_settings(s):
-    SETTINGS_FILE.write_text(json.dumps(s, ensure_ascii=False, indent=2), encoding="utf-8")
+    storage.write_json(SETTINGS_FILE, s)
 def load_tips():
-    return json.loads(TIPS_FILE.read_text(encoding="utf-8")) if TIPS_FILE.exists() else []
+    return storage.read_json(TIPS_FILE, [])
 
 SEEN_FILE = Path(__file__).parent / "seen_listings.json"
 _scan_status = {"running": False, "last": "", "found": 0}
 
 def load_seen():
-    return set(json.loads(SEEN_FILE.read_text(encoding="utf-8"))) if SEEN_FILE.exists() else set()
+    return set(storage.read_json(SEEN_FILE, []))
 def save_seen(s):
-    SEEN_FILE.write_text(json.dumps(list(s)), encoding="utf-8")
+    storage.write_json(SEEN_FILE, list(s))
 
 def quick_yad2_scan():
     """Scan Yad2 directly via requests (no Selenium). Fast, lightweight."""
@@ -77,11 +78,10 @@ def quick_yad2_scan():
 
     seen      = load_seen()
     dismissed = load_dismissed()
-    existing  = {}
-    if (Path(__file__).parent / "all_listings.json").exists():
-        for item in load_listings():
-            existing[item["id"]] = item
 
+    # Parse the feed into a {id: listing} map first; merge into the on-disk
+    # master list atomically below so concurrent writers don't lose updates.
+    parsed = {}
     new_count = 0
     for section in ("private", "agency", "yad1", "platinum"):
         for item in feed.get(section, []):
@@ -110,25 +110,29 @@ def quick_yad2_scan():
                     "contact": (item.get("customer", {}) or {}).get("name", ""),
                     "found_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
                 }
-                # Don't overwrite an earlier found_at if we've seen this listing before
-                if lid in existing and existing[lid].get("found_at"):
-                    lst["found_at"] = existing[lid]["found_at"]
-                existing[lid] = lst
+                parsed[lid] = lst
                 if lid not in seen and lid not in dismissed:
                     new_count += 1
             except Exception:
                 continue
 
-    # Save updated listings
-    all_sorted = list(reversed(list(existing.values())))
-    (Path(__file__).parent / "all_listings.json").write_text(
-        json.dumps(all_sorted, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    # Save updated listings — merge atomically into whatever is on disk now.
+    state = {"total": 0}
+    def _mut(existing_list):
+        existing = {item["id"]: item for item in (existing_list or []) if isinstance(item, dict) and "id" in item}
+        for lid, lst in parsed.items():
+            # Don't overwrite an earlier found_at if we've seen this listing before
+            if lid in existing and existing[lid].get("found_at"):
+                lst["found_at"] = existing[lid]["found_at"]
+            existing[lid] = lst
+        state["total"] = len(existing)
+        return list(reversed(list(existing.values())))
+    storage.update_json(LISTINGS_FILE, _mut, [])
     _scan_status = {
         "running": False,
         "last":    datetime.now().strftime("%H:%M:%S"),
         "found":   new_count,
-        "total":   len(existing),
+        "total":   state["total"],
     }
     set_status("yad2", "idle",
                f"סריקה ידנית הסתיימה — {new_count} חדשות",
@@ -848,19 +852,18 @@ def api_ingest():
     items = request.get_json(silent=True) or []
     if not isinstance(items, list):
         return jsonify({"error": "expected a list"}), 400
-    existing = {x["id"]: x for x in load_listings() if isinstance(x, dict) and "id" in x}
-    added = 0
-    for it in items:
-        if not isinstance(it, dict) or "id" not in it:
-            continue
-        if it["id"] not in existing:
-            added += 1
-        existing[it["id"]] = it
-    LISTINGS_FILE.write_text(
-        json.dumps(list(reversed(list(existing.values()))), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return jsonify({"ok": True, "received": len(items), "added": added})
+    state = {"added": 0}
+    def _mut(existing_list):
+        existing = {x["id"]: x for x in (existing_list or []) if isinstance(x, dict) and "id" in x}
+        for it in items:
+            if not isinstance(it, dict) or "id" not in it:
+                continue
+            if it["id"] not in existing:
+                state["added"] += 1
+            existing[it["id"]] = it
+        return list(reversed(list(existing.values())))
+    storage.update_json(LISTINGS_FILE, _mut, [])
+    return jsonify({"ok": True, "received": len(items), "added": state["added"]})
 
 
 # ─── Manually-added listings ("apartments we found ourselves") ────────────────
@@ -899,12 +902,11 @@ def api_add_listing():
         "found_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "manual": True,
     }
-    existing = {item["id"]: item for item in load_listings()}
-    existing[lst["id"]] = lst
-    LISTINGS_FILE.write_text(
-        json.dumps(list(reversed(list(existing.values()))), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    def _mut(existing_list):
+        existing = {item["id"]: item for item in (existing_list or []) if isinstance(item, dict) and "id" in item}
+        existing[lst["id"]] = lst
+        return list(reversed(list(existing.values())))
+    storage.update_json(LISTINGS_FILE, _mut, [])
     return jsonify({"ok": True, "listing": lst})
 
 

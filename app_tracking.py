@@ -12,9 +12,10 @@ STORAGE
   rest of the system.
 """
 
-import json
 from datetime import datetime
 from pathlib import Path
+
+import storage
 
 ROOT = Path(__file__).parent
 TRACK_F = ROOT / "tracking.json"
@@ -38,20 +39,14 @@ def _now() -> str:
 
 
 def load_tracking() -> list:
-    if TRACK_F.exists():
-        try:
-            return json.loads(TRACK_F.read_text(encoding="utf-8"))
-        except Exception:
-            return []
-    return []
+    return storage.read_json(TRACK_F, [])
 
 
 def save_tracking(items: list):
-    TRACK_F.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+    storage.write_json(TRACK_F, items)
 
 
 def add_item(data: dict, added_by: str) -> dict:
-    items = load_tracking()
     item = {
         "id": "trk_" + datetime.now().strftime("%Y%m%d%H%M%S%f"),
         "address": data.get("address", "").strip(),
@@ -67,32 +62,36 @@ def add_item(data: dict, added_by: str) -> dict:
         "added_by": added_by,
         "added_at": _now(),
     }
-    items.insert(0, item)  # newest first
-    save_tracking(items)
+    storage.update_json(TRACK_F, lambda items: [item] + (items or []), [])  # newest first
     return item
 
 
 def update_item(item_id: str, data: dict) -> dict | None:
-    items = load_tracking()
-    for it in items:
-        if it["id"] == item_id:
-            for k, v in data.items():
-                if k in _EDITABLE:
-                    if k == "rating":
-                        it[k] = int(v or 0)
-                    elif k == "status":
-                        it[k] = v if v in STATUSES else it.get("status", "to_contact")
-                    else:
-                        it[k] = v
-            save_tracking(items)
-            return it
-    return None
+    state = {"item": None}
+    def _mut(items):
+        items = items or []
+        for it in items:
+            if it["id"] == item_id:
+                for k, v in data.items():
+                    if k in _EDITABLE:
+                        if k == "rating":
+                            it[k] = int(v or 0)
+                        elif k == "status":
+                            it[k] = v if v in STATUSES else it.get("status", "to_contact")
+                        else:
+                            it[k] = v
+                state["item"] = it
+        return items
+    storage.update_json(TRACK_F, _mut, [])
+    return state["item"]
 
 
 def delete_item(item_id: str) -> bool:
-    items = load_tracking()
-    new = [it for it in items if it["id"] != item_id]
-    if len(new) != len(items):
-        save_tracking(new)
-        return True
-    return False
+    state = {"removed": False}
+    def _mut(items):
+        items = items or []
+        new = [it for it in items if it["id"] != item_id]
+        state["removed"] = len(new) != len(items)
+        return new
+    storage.update_json(TRACK_F, _mut, [])
+    return state["removed"]
