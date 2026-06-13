@@ -1,93 +1,83 @@
 # Project State — דירונט / DiroNet
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Status
-🟢🚀 **DEPLOYED & LIVE 24/7** — public site with HTTPS + login
-- Live at **https://dironet.duckdns.org** (Hetzner CX22, Docker, Caddy)
-- Runs 24/7 via `run_all.py` supervisor (auto-restart on crash/reboot)
-- Per-user login (itay / neta), personal favorites, shared tracking board
-- Mobile-first UI (bottom nav + hamburger), fully rebranded to דירונט
+🟢🚀 **DEPLOYED & LIVE 24/7** — code quality initiative underway
+- Live at **https://dironet.duckdns.org** (Hetzner CX22, Docker, Caddy, HTTPS)
+- Facebook runs on home PC, pushes via /api/ingest; Yad2 runs 24/7 on server
+- 38-finding engineering audit completed; Phase 0 (critical fixes) in progress
 
 ## What Works
 ### Scraping & classification
-- ✅ Facebook scraping with **"ראה עוד" expansion** → relevant detections jumped from ~2 to 14+ per scan
+- ✅ Facebook scraping from home PC (IP ביתי) → pushes to server via token-auth /api/ingest
 - ✅ Yad2 (requests + Selenium) + Homely (NameError bug fixed)
-- ✅ Classifier: 7 categories, **46/46 unit tests** (`test_classifier.py`)
-- ✅ **שכונה ב only** filter — rejects other neighborhoods (א/ה/ו, נווה זאב…)
-- ✅ **Food/service ad rejection** (סושי, קייטרינג…) + availability-needs-rooms guard
-- ✅ Room range uses settings min/max (1.5–3.5), not hardcoded
-- ✅ Cross-group + intra-group MD5 dedup; per-group low-post warnings
-- ✅ Self-healing scrape (5 strategies) + explicit 45s page-load timeout
+- ✅ Classifier: 7 categories, **46/46 unit tests**
+- ✅ שכונה ב-only filter, food-ad rejection, neighborhood cross-filter
+- ✅ "ראה עוד" expansion, 5-strategy DOM fallback, per-group low-post warnings
 
 ### Product / UI
-- ✅ **In-app login** (`app_auth.py`, werkzeug-hashed `users.json`, Flask sessions)
-- ✅ **Per-user favorites** ❤️ (`favorites.json`) — personal area per user
-- ✅ **Shared tracking board** 📋 (`app_tracking.py`, `tracking.json`): status pipeline,
-  contact + call button, viewing date, 1–5 rating, notes, Google-Maps navigate
-- ✅ Tracking cards are **read-only with a dedicated edit modal**
-- ✅ **Add apartment manually** (➕) — listings you found yourselves
-- ✅ "Add to tracking" button shows **✓ במעקב** once added (no double-add)
-- ✅ **Match score badge**, "why matched" chips, freshness, source badge on cards
-- ✅ **Live agent-status widget** (`agent_status.py`) — what each scanner is doing now
-- ✅ Filters: search + sort + source; 4 stat widgets (new / hot / review)
-- ✅ **Mobile-first**: bottom nav bar + hamburger side menu, single-column grids,
-  44px tap targets, RTL-correct
-
-### Telegram
-- ✅ Clean alerts: match level + %, why-matched, freshness, contact, price
-- ✅ `/סרוק` only pushes truly relevant listings (no spam)
-- ✅ Dedup via `sent_telegram.json`
+- ✅ In-app login (`app_auth.py`) — itay / neta, 30-day sessions
+- ✅ Per-user favorites ❤️, shared tracking board 📋 with status/rating/notes/call/navigate
+- ✅ Read-only tracking cards with dedicated edit modal
+- ✅ Add apartment manually (➕)
+- ✅ Match score badge, "why matched" chips, freshness, source badge on cards
+- ✅ Live agent-status widget (`agent_status.py`)
+- ✅ Filters: search + sort + source; 4 stat widgets; hamburger + bottom-nav mobile UI
+- ✅ Telegram bot (Yad2 alerts only; /scan; keep/dismiss)
 
 ### Infra / deployment
-- ✅ **Docker + docker-compose** (Chromium baked in), whole-dir mount for persistence
-- ✅ **Caddy** reverse proxy: automatic HTTPS (Let's Encrypt) + private dashboard
-- ✅ Secrets in `.env` (git-ignored); UTF-8 stdout fix for Windows logs
-- ✅ `run_all.py` supervisor; firewall 22/80/443 only; dashboard 5050 internal
-- ✅ Portfolio docs: ARCHITECTURE, DECISIONS (ADRs), INTERVIEW_GUIDE
+- ✅ Docker + docker-compose, Caddy HTTPS, DISABLE_FACEBOOK=1 on server
+- ✅ `run_all.py` supervisor; firewall 22/80/443; dashboard 5050 internal
+- ✅ `/api/ingest` token-authenticated endpoint for home-PC FB push
+- ✅ `telegram_bot.py` bot crash fixed (Hebrew /סרוק → MessageHandler)
+- ✅ Portfolio docs: ARCHITECTURE, DECISIONS (ADRs), INTERVIEW_GUIDE, AUDIT
+
+### Security / code quality (Phase 0, in progress)
+- ✅ **Stored XSS fixed** — all scraped fields escaped via `esc()`/`safeUrl()`/`safeId()` in dashboard rendering (commit `8fedab6`)
+- ✅ **`storage.py`** — atomic (`os.replace`) + cross-process locked (`filelock`) JSON helper; 8/8 tests including 20-thread race test (commit `3fb3902`)
+- ✅ Security audit documented in `docs/AUDIT.md` (38 findings, 80/20 roadmap)
+- ✅ `fb_profile.zip`, `*.lock`, `*.tmp`, `tracking.json` git-ignored
+- ✅ Dead functions (`mentions_hood`, `mentions_street`) removed
+- ⚠️ **UNCOMMITTED**: Step 2 Commit 2 migration in progress — `app_auth.py`, `app_tracking.py`, `facebook_agent.py` have been edited to use `storage.py` but not yet committed or tested
 
 ## Known Problems
-- ⚠️ Facebook login (`fb_chrome_profile`) **not yet seeded on the server** — FB scanning
-  won't run until the profile is created locally (`--login`) and `scp`'d up.
-- ⚠️ Yad2 returns Captcha intermittently from the datacenter IP (Facebook is primary).
-- ⚠️ Facebook may flag the server's datacenter IP → occasional re-login needed.
-- ⚠️ Manual + agent listings can duplicate (intentional for now; dedupe later).
-- ⚠️ JSON read-modify-write isn't concurrency-safe (fine at this scale; SQLite later).
-- ⚠️ Old data-file `rm -rf` cleanup needed once on the server (bind-mount artifacts).
-- ⚠️ Expiry date still 2026-06-23 — extend in settings.json before then.
+- ⚠️ **Step 2 Commit 2 incomplete** — storage migration to `app_auth`, `app_tracking`, `facebook_agent` is half-done (local edits, uncommitted). Also pending: `apartment_agent.py` and `dashboard.py` risky writers.
+- ⚠️ **Phase 0 Step 3 not started** — Selenium lifecycle / zombie Chrome fix (F3+F4) still needed.
+- ⚠️ Facebook blocks the server's Hetzner IP (datacenter) — FB must run on home PC. Works, but not autonomous.
+- ⚠️ Yad2 returns Captcha intermittently from the server IP.
+- ⚠️ Expiry date `2026-06-23` approaching — extend in settings.json.
+- ⚠️ No login rate-limiting / CSRF / cookie hardening (F5–F8 in audit — Phase 1).
+- ⚠️ JSON writes in `apartment_agent.py` and `dashboard.py` still not atomic (remainder of F2).
+- ⚠️ 204 zombie processes observed — Selenium lifecycle bug (F3+F4).
 
 ## Architecture
 ```
-Internet ──HTTPS+login──► Caddy ──private──► dironet container (run_all.py)
-                                               ├ dashboard.py  (Flask UI + auth + favorites + tracking)
-                                               ├ telegram_bot.py
-                                               ├ facebook_agent.py / apartment_agent.py
-                                               └ tips_agent.py
-   JSON store (host volume): all_listings, favorites, users, tracking, seen_*, sent_*, agent_status
-   app_env.py (.env + UTF-8) · app_auth.py (login+favorites) · app_tracking.py (board)
+Internet ──HTTPS──► Caddy ──► dironet container (run_all.py: yad2 + bot + dashboard)
+Home PC ──────────────────────────────────────────► /api/ingest (token-auth) → all_listings.json
+JSON store: all_listings, favorites, users, tracking, seen_*, sent_*, agent_status
+app_env.py (.env) · app_auth.py (login+favorites) · app_tracking.py (board) · storage.py (safe I/O)
 ```
 
 ## Useful Commands
 ```bash
 # Local
-python dashboard.py                 # http://localhost:5050
-python test_classifier.py           # 46 unit tests
-python app_auth.py set itay         # set a login password
-python run_all.py                   # run everything (supervisor)
+python facebook_agent.py          # FB scan from home PC (runs every 30min)
+python facebook_agent.py --debug  # one cycle, visible Chrome
+python test_classifier.py         # 46 classifier tests
+python test_storage.py            # 8 storage/concurrency tests
+python test_dashboard_security.py # 25 XSS regression tests
+python dashboard.py               # http://localhost:5050
 
-# Server (in ~/AGENTS)
-git pull && docker compose up -d --build      # normal update
-docker compose down && docker compose up -d --build   # after a rename
-docker compose exec dironet python app_auth.py set neta   # change a password
-docker compose logs dironet --tail 40         # app logs
-docker compose logs caddy --tail 40           # HTTPS / proxy logs
+# Server
+cd ~/AGENTS && git pull && docker compose up -d --build
+docker compose logs dironet --tail 30
 ```
 
 ## Current Priority
-**Seed Facebook login on the server** so the primary source works:
-run `python facebook_agent.py --login` locally, then `scp -r fb_chrome_profile root@167.233.103.201:/root/AGENTS/`.
+**Complete Phase 0 of the code-health initiative (see `docs/AUDIT.md`):**
+1. Finish + commit Step 2 Commit 2 (storage migration for remaining writers)
+2. Fix Selenium lifecycle + supervisor backoff (Step 3, F3+F4)
+3. Then Phase 1: cookie hardening + login rate-limit (F6+F8)
 
 ## Next Recommended Step
-1. Seed `fb_chrome_profile/` on the server (above) → confirm FB scanning runs.
-2. Extend `expiry_date` in settings.json (currently 2026-06-23).
-3. Optional polish: dedupe manual vs agent listings; viewing-date reminders;
-   filter the tracking board by status.
+Finish the storage migration: run full test suite, commit Step 2 Commit 2, then push to the server and do `docker compose up -d --build` (new `filelock` dep needs a rebuild).
