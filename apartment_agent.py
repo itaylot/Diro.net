@@ -298,7 +298,7 @@ def send_email(new_listings: list[dict]):
 
 async def send_telegram(new_listings: list[dict]):
     """Send new listings via Telegram bot."""
-    from telegram_bot import send_listing, load_sent, save_sent
+    from telegram_bot import send_listing, load_sent, SENT_FILE
     from telegram import Bot
     from app_env import secret
     cfg   = load_settings()
@@ -306,14 +306,17 @@ async def send_telegram(new_listings: list[dict]):
     cid   = secret("TELEGRAM_CHAT_ID", cfg.get("telegram_chat_id", ""))
     if not token or not cid:
         return
-    sent = load_sent()
+    sent = load_sent()           # snapshot, used only to skip already-sent listings
     bot  = Bot(token=token)
+    newly_sent = set()
     for lst in new_listings:
         if lst["id"] not in sent:
             await send_listing(bot, cid, lst)
-            sent.add(lst["id"])
+            newly_sent.add(lst["id"])
             await asyncio.sleep(0.5)
-    save_sent(sent)
+    # Union under a lock — the bot writes this file too (see telegram_bot.push_new_listings).
+    if newly_sent:
+        storage.update_json(SENT_FILE, lambda ids: list(set(ids) | newly_sent), [])
 
 
 def is_expired(cfg: dict) -> bool:

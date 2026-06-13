@@ -1020,7 +1020,7 @@ def scrape_group(
 async def send_telegram(listings: list[dict]):
     try:
         from telegram import Bot
-        from telegram_bot import send_listing, load_sent, save_sent
+        from telegram_bot import send_listing, load_sent, SENT_FILE
         from app_env import secret
         import asyncio
         s = cfg()
@@ -1028,14 +1028,17 @@ async def send_telegram(listings: list[dict]):
         cid   = secret("TELEGRAM_CHAT_ID", s.get("telegram_chat_id", ""))
         if not token or not cid:
             return
-        sent = load_sent()
+        sent = load_sent()           # snapshot, used only to skip already-sent listings
         bot  = Bot(token=token)
+        newly_sent = set()
         for lst in listings:
             if lst["id"] not in sent:
                 await send_listing(bot, cid, lst)
-                sent.add(lst["id"])
+                newly_sent.add(lst["id"])
                 await asyncio.sleep(0.6)
-        save_sent(sent)
+        # Union under a lock — apartment_agent + the bot write this file too.
+        if newly_sent:
+            storage.update_json(SENT_FILE, lambda ids: list(set(ids) | newly_sent), [])
         print(f"  [Telegram] שלחתי {len(listings)} התראות")
     except Exception as e:
         print(f"  [Telegram] שגיאה: {e}")

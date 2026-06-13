@@ -26,8 +26,6 @@ def load_listings():
     return storage.read_json(LISTINGS_FILE, [])
 def load_dismissed():
     return set(storage.read_json(DISMISSED_FILE, []))
-def save_dismissed(d):
-    storage.write_json(DISMISSED_FILE, list(d))
 def load_settings():
     return storage.read_json(SETTINGS_FILE, {})
 def save_settings(s):
@@ -968,11 +966,14 @@ def api_agent_status():
 
 @app.route("/api/dismiss/<path:lid>", methods=["POST"])
 def api_dismiss(lid):
-    d=load_dismissed(); d.add(lid); save_dismissed(d); return jsonify({"ok":True})
+    # Locked read-modify-write (the Telegram bot writes this file too).
+    storage.update_json(DISMISSED_FILE, lambda ids: list(set(ids) | {lid}), [])
+    return jsonify({"ok":True})
 
 @app.route("/api/restore/<path:lid>", methods=["POST"])
 def api_restore(lid):
-    d=load_dismissed(); d.discard(lid); save_dismissed(d); return jsonify({"ok":True})
+    storage.update_json(DISMISSED_FILE, lambda ids: [i for i in ids if i != lid], [])
+    return jsonify({"ok":True})
 
 @app.route("/api/settings", methods=["GET"])
 def api_get_settings():

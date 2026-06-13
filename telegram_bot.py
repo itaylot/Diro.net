@@ -13,9 +13,10 @@ Commands:
 
 import app_env  # noqa: F401 — UTF-8 stdout + .env (must be first)
 import asyncio
-import json
 import logging
 from pathlib import Path
+
+import storage
 
 from telegram import (
     Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update,
@@ -39,38 +40,19 @@ SENT_FILE      = ROOT / "sent_telegram.json"
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def load_settings() -> dict:
-    with open(SETTINGS_FILE, encoding="utf-8") as f:
-        return json.load(f)
+    return storage.read_json(SETTINGS_FILE, {})
 
 def save_settings(s: dict):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(s, f, ensure_ascii=False, indent=2)
+    storage.write_json(SETTINGS_FILE, s)
 
 def load_all() -> list[dict]:
-    if ALL_FILE.exists():
-        with open(ALL_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    return storage.read_json(ALL_FILE, [])
 
 def load_dismissed() -> set:
-    if DISMISSED_FILE.exists():
-        with open(DISMISSED_FILE, encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
-
-def save_dismissed(d: set):
-    with open(DISMISSED_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(d), f)
+    return set(storage.read_json(DISMISSED_FILE, []))
 
 def load_sent() -> set:
-    if SENT_FILE.exists():
-        with open(SENT_FILE, encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
-
-def save_sent(s: set):
-    with open(SENT_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(s), f)
+    return set(storage.read_json(SENT_FILE, []))
 
 
 # ─── Match score + reasons + freshness helpers ────────────────────────────────
@@ -265,10 +247,12 @@ async def push_new_listings(bot: Bot, chat_id: str) -> int:
 
     for lst in new:
         await send_listing(bot, chat_id, lst)
-        sent.add(lst["id"])
         await asyncio.sleep(0.5)
 
-    save_sent(sent)
+    # apartment_agent also writes sent_telegram.json — union under a lock so
+    # neither process clobbers the other's newly-sent IDs.
+    new_ids = {lst["id"] for lst in new}
+    storage.update_json(SENT_FILE, lambda ids: list(set(ids) | new_ids), [])
     return len(new)
 
 
@@ -389,9 +373,9 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if data.startswith("dismiss_"):
         lid = data[len("dismiss_"):]
-        d   = load_dismissed()
-        d.add(lid)
-        save_dismissed(d)
+        # Locked read-modify-write: the dashboard writes this same file, so a
+        # plain load→add→save could lose the other process's change.
+        storage.update_json(DISMISSED_FILE, lambda ids: list(set(ids) | {lid}), [])
         try:
             await query.edit_message_reply_markup(
                 reply_markup=InlineKeyboardMarkup([[
