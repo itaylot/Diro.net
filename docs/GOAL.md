@@ -39,7 +39,7 @@ Each item has: **what · why · where · acceptance**.
 
 > Goal: zero known data-races, zero known XSS, no silent crash loops. Small, surgical.
 
-### 1.1 ⬜ Finish the `storage.py` migration — `telegram_bot.py`
+### 1.1 ✅ Finish the `storage.py` migration — `telegram_bot.py` (done 2026-06-13, `2428902`)
 - **What:** route `load_settings/save_settings`, `load_all`, `load_dismissed/save_dismissed`,
   `load_sent/save_sent` through `storage.read_json` / `write_json`.
 - **Why:** the bot still does raw `open()/json.dump` (no lock, non-atomic). The dashboard
@@ -49,6 +49,11 @@ Each item has: **what · why · where · acceptance**.
 - **Where:** `telegram_bot.py:41-73`.
 - **Acceptance:** no raw `json.load/dump` left in `telegram_bot.py`; bot still sends/dismisses;
   all suites green.
+- **Done:** also went a layer deeper than planned — switched all 5 read-modify-write sites
+  (`dismissed.json`, `sent_telegram.json`) to `storage.update_json` so concurrent writers
+  can't lose updates. **Discovered a third `sent_telegram.json` writer in `facebook_agent`**
+  that the original review missed; fixed it too. Removed dead `save_dismissed`/`save_sent`.
+  Proven with a 2-thread/200-id race test (0 lost updates).
 
 ### 1.2 ⬜ Close the `trkCard` XSS gap
 - **What:** wrap the tracking-card link in `safeUrl()` like every other link.
@@ -221,4 +226,7 @@ After step 3 you can already walk into an interview and defend the project. Step
 ## Session log
 - **2026-06-13** — GOAL plan created from a full code review. Baseline recorded
   (storage.py migration done except telegram_bot; XSS + race + zombie-Chrome fixed earlier).
-  Nothing in Phases 1–4 started yet.
+- **2026-06-13** — **Phase 1.1 ✅** (`2428902`). telegram_bot migrated to storage.py; all 5
+  read-modify-write sites for dismissed/sent moved to `update_json`; found+fixed a third
+  sent-writer in facebook_agent; removed dead save_* helpers. Partially advances **1.4**
+  (telegram_bot settings read now safe via `read_json`; facebook_agent's raw read still TODO).
