@@ -139,13 +139,16 @@ def fetch_rss_tips() -> list[dict]:
         try:
             r = requests.get(feed_url, headers=headers, timeout=10)
             root = ET.fromstring(r.content)
+            import html, re
+            def _clean(s: str) -> str:
+                s = re.sub(r"<[^>]+>", "", s)   # strip HTML tags
+                s = html.unescape(s)            # decode entities (&nbsp; &amp; &#39; ...)
+                return re.sub(r"\s+", " ", s).strip()  # collapse whitespace
+
             for item in root.iter("item"):
-                title = item.findtext("title", "").strip()
-                desc  = item.findtext("description", "").strip()
+                title = _clean(item.findtext("title", ""))
+                desc  = _clean(item.findtext("description", ""))[:300]
                 link  = item.findtext("link", "").strip()
-                # Clean HTML tags from description
-                import re
-                desc = re.sub(r"<[^>]+>", "", desc)[:300].strip()
                 if title and len(title) > 10:
                     results.append({
                         "title":   title,
