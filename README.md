@@ -1,8 +1,8 @@
-# 🏠 דירונט — Apartment-Hunting Agent for Beer Sheva
+# 🏠 דירונט — Apartment-Hunting Dashboard for Beer Sheva
 
-An always-on agent that monitors apartment sources (Yad2, Homely, Facebook groups), filters out the noise with a deterministic classifier, and pushes **only relevant matches** to Telegram in real time — with a polished web dashboard for triage.
+A **web app** that continuously monitors apartment sources (Yad2, Homely, Facebook groups), filters out the noise with a deterministic classifier, and presents **only the relevant matches** in a polished dashboard — browse, filter, favorite, and track viewings, with a live "what's the agent doing now" indicator.
 
-Built for a real apartment search (a couple looking in שכונה ב׳, Beer Sheva), deployed and actively running.
+Built for a real apartment search (a couple looking in שכונה ב׳, Beer Sheva), deployed and actively running. A Telegram bot is an optional add-on that pings you when a new match appears.
 
 ---
 
@@ -20,11 +20,20 @@ The demo account shows the product as a real user would experience it: apartment
 
 ## ✨ What it does
 
+**The dashboard is the product:**
+- **Browse & triage matches** — cards with match-score badges, freshness, "why this matched", and price.
+- **Filter & sort** — hot / new / review tabs, search, sort by score/price/freshness.
+- **Favorites** — a per-user personal area (each user's saved apartments are private to them).
+- **Tracking board** — manage apartments you're pursuing: statuses (to-contact / scheduled / visited / candidate / rejected), ratings, viewing dates, and free-text notes.
+- **Live agent-activity widget** — see exactly what the scanners are doing right now and when the next scan runs.
+- **Add-your-own** — manually add an apartment you found elsewhere.
+
+**Behind the dashboard:**
 - **Monitors multiple sources** continuously — Yad2 + Homely via HTTP/Selenium, 8 Facebook groups via Selenium.
-- **Classifies every listing** with a transparent rule engine: rejects roommates, sales, food ads, seekers, wrong neighborhoods, and over-budget posts. Each kept listing comes with **the reasons it matched** (shown in the dashboard and Telegram alert).
-- **Alerts instantly on Telegram** with match score, why-it-matched, freshness, and price — never the same listing twice. Inline buttons to keep or dismiss, right from the chat.
-- **Web dashboard** with match-score badges, freshness, filters (hot / new / review), a live agent-activity widget, favorites (per user), and a tracking board for managing viewings.
+- **Classifies every listing** with a transparent rule engine: rejects roommates, sales, food ads, seekers, wrong neighborhoods, and over-budget posts — each kept listing carries **the reasons it matched**.
 - **Runs 24/7** under a supervisor (`run_all.py`) that auto-restarts any crashed component with exponential backoff.
+
+**Optional add-on:** a Telegram bot pushes a notification when a new match appears, with inline keep/dismiss buttons. Nice for getting pinged on the go — but all the real work happens in the dashboard.
 
 ---
 
