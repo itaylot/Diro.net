@@ -160,6 +160,7 @@ body{
 }
 .hdr{background:linear-gradient(160deg,#0D2B1A 0%,#1A4A2E 55%,#163D24 100%);padding:0 40px;height:64px;display:flex;align-items:center;position:sticky;top:0;z-index:300;box-shadow:0 1px 0 rgba(255,255,255,.06),0 4px 24px rgba(0,0,0,.4)}
 .hdr-in{width:100%;max-width:1320px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.hdr-brand{display:flex;align-items:center;gap:14px}
 .logo{display:flex;align-items:center;gap:12px;cursor:pointer}
 .logo-mark{width:38px;height:38px;border-radius:11px;flex-shrink:0;background:linear-gradient(135deg,#4ade80,#16a34a);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(74,222,128,.35),inset 0 1px 0 rgba(255,255,255,.25)}
 .logo-name{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1}
@@ -510,13 +511,16 @@ body{
 <body>
 <header class="hdr">
   <div class="hdr-in">
-    <!-- menu button is first in DOM → appears on the RIGHT in RTL (closest to the drawer that opens from the right) -->
-    <button class="menu-btn" onclick="openMenu()" aria-label="תפריט">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="logo" onclick="showView('listings')">
-      <div class="logo-mark">🏠</div>
-      <div><div class="logo-name">דירונט</div><div class="logo-tagline">מוצא את הדירה שלך</div></div>
+    <!-- Brand group is first in DOM → appears on the RIGHT in RTL. Hamburger sits
+         at the far-right corner, next to the drawer that opens from the right. -->
+    <div class="hdr-brand">
+      <button class="menu-btn" onclick="openMenu()" aria-label="תפריט">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="logo" onclick="showView('listings')">
+        <div class="logo-mark">🏠</div>
+        <div><div class="logo-name">דירונט</div><div class="logo-tagline">מוצא את הדירה שלך</div></div>
+      </div>
     </div>
     <div class="hdr-right">
       <div class="live-pill"><span class="dot" id="ag-dot"></span><span id="ag-lbl" class="lp-lbl">טוען</span></div>
