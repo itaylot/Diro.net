@@ -510,6 +510,10 @@ body{
 <body>
 <header class="hdr">
   <div class="hdr-in">
+    <!-- menu button is first in DOM → appears on the RIGHT in RTL (closest to the drawer that opens from the right) -->
+    <button class="menu-btn" onclick="openMenu()" aria-label="תפריט">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="logo" onclick="showView('listings')">
       <div class="logo-mark">🏠</div>
       <div><div class="logo-name">דירונט</div><div class="logo-tagline">מוצא את הדירה שלך</div></div>
@@ -517,9 +521,6 @@ body{
     <div class="hdr-right">
       <div class="live-pill"><span class="dot" id="ag-dot"></span><span id="ag-lbl" class="lp-lbl">טוען</span></div>
       <div class="user-pill"><span class="user-av" id="user-av">?</span><span class="up-name" id="user-name">…</span></div>
-      <button class="menu-btn" onclick="openMenu()" aria-label="תפריט">
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
     </div>
   </div>
 </header>
